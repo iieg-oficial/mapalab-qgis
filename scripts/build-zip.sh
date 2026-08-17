@@ -9,13 +9,10 @@ NOMBRE="mapalab-qgis-$VERSION.zip"
 rm -rf "$DIST_DIR/mapalab" "$DIST_DIR/$NOMBRE"
 mkdir -p "$DIST_DIR/mapalab"
 
-for archivo in $(git -C "$REPO_ROOT" ls-files); do
-    case "$archivo" in
-        scripts/*|docs/*|Makefile|README.md|LICENSE|.gitignore) continue ;;
-    esac
+while read -r archivo; do
     mkdir -p "$DIST_DIR/mapalab/$(dirname "$archivo")"
     cp "$REPO_ROOT/$archivo" "$DIST_DIR/mapalab/$archivo"
-done
+done < <("$REPO_ROOT/scripts/plugin-files.sh")
 
 cp "$REPO_ROOT/LICENSE" "$DIST_DIR/mapalab/LICENSE"
 

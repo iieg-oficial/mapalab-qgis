@@ -3,8 +3,6 @@ set -e
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ZIP="$REPO_ROOT/dist/mapalab-qgis.zip"
-EXCLUIDOS='^(scripts/|docs/|Makefile|README\.md|LICENSE|\.gitignore|\.githooks/|make/)'
-
 [ -f "$ZIP" ] || { echo "Falta $ZIP: corre make zip." >&2; exit 1; }
 
 if [ -n "$(git -C "$REPO_ROOT" status --porcelain)" ]; then
@@ -16,7 +14,7 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 unzip -q "$ZIP" -d "$TMP"
 
-git -C "$REPO_ROOT" ls-files | grep -vE "$EXCLUIDOS" | sort > "$TMP/esperados.txt"
+"$REPO_ROOT/scripts/plugin-files.sh" > "$TMP/esperados.txt"
 (cd "$TMP/mapalab" && find . -type f ! -name LICENSE | sed 's|^\./||' | sort) > "$TMP/incluidos.txt"
 
 if ! diff -q "$TMP/esperados.txt" "$TMP/incluidos.txt" >/dev/null; then
