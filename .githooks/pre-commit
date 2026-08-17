@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+VERSION=$(grep '^version=' "$REPO_ROOT/metadata.txt" | cut -d= -f2)
+
+if ! grep -q "^## \[$VERSION\]" "$REPO_ROOT/docs/CHANGELOG.md"; then
+    echo "El CHANGELOG no tiene la entrada de la version $VERSION de metadata.txt." >&2
+    exit 1
+fi
