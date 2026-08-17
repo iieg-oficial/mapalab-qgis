@@ -1,4 +1,4 @@
-.PHONY: zip tokens link
+.PHONY: zip verify tokens link
 
 ##@ Complemento
 
@@ -7,6 +7,12 @@ zip: ## Empaquetar el complemento para instalar en QGIS
 	banner 'ZIP' 'complemento de QGIS'
 	rule
 	./scripts/build-zip.sh
+
+verify: ## Comprobar que el zip coincide con el repositorio
+	@$(LIB)
+	banner 'VERIFY' 'zip contra repositorio'
+	rule
+	./scripts/verify-zip.sh
 
 tokens: ## Traer el theme.qss del modulo Identidad de mariachi
 	@$(LIB)

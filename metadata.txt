@@ -14,8 +14,11 @@ tracker=https://github.com/iieg-oficial/mapalab-qgis/issues
 repository=https://github.com/iieg-oficial/mapalab-qgis
 homepage=https://github.com/iieg-oficial/mapalab-qgis
 
+tags=web,wms,wfs,catalog,catalogo,geopackage,mexico,jalisco,inegi,opendata
+
 category=Web
 icon=icon.svg
+changelog=Ver docs/CHANGELOG.md en el repositorio.
 experimental=False
 deprecated=False
 hasProcessingProvider=no
