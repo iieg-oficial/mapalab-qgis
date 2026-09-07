@@ -11,13 +11,27 @@ CHANGELOG de aquel repositorio, entre sus versiones 1.117.0 y 1.128.1.
 
 ---
 
-## [0.14.1] - 2026-09-02
+## [0.14.2] - 2026-09-02
 
 ### Cambiado: `make tokens` apunta al modulo MEL
 
 El modulo Identidad de mariachi se renombro a MEL (Manual de Estilo y Lineamientos) y su prefijo de
 API paso de `/identidad` a `/mel`. `scripts/sync-tokens.sh` sigue esa ruta. El `theme.qss` que trae
 declara ahora su origen como MEL en el encabezado; el contenido no cambia.
+
+---
+
+## [0.14.1] - 2026-08-28
+
+### Corregido: el estado «deshabilitada» se lee del arbol, no de la primera letra del nombre
+
+`is_disabled()` daba por deshabilitada a toda capa cuyo `label` empezara con `*`. Desde la 1.146.0
+del visor ese asterisco ya no existe: el arbol publica `disabled: true`. El complemento acepta las
+dos formas, porque esta instalado en maquinas que no se actualizan a la vez que el servidor y
+tiene que funcionar contra cualquiera de las dos versiones.
+
+`clean_label()` se queda como esta: con el arbol nuevo no tiene nada que quitar, y con el viejo
+sigue haciendo falta.
 
 ---
 
