@@ -11,6 +11,16 @@ CHANGELOG de aquel repositorio, entre sus versiones 1.117.0 y 1.128.1.
 
 ---
 
+## [0.14.2] - 2026-09-02
+
+### Cambiado: `make tokens` apunta al modulo MEL
+
+El modulo Identidad de mariachi se renombro a MEL (Manual de Estilo y Lineamientos) y su prefijo de
+API paso de `/identidad` a `/mel`. `scripts/sync-tokens.sh` sigue esa ruta. El `theme.qss` que trae
+declara ahora su origen como MEL en el encabezado; el contenido no cambia.
+
+---
+
 ## [0.14.1] - 2026-08-28
 
 ### Corregido: el estado «deshabilitada» se lee del arbol, no de la primera letra del nombre
@@ -22,6 +32,8 @@ tiene que funcionar contra cualquiera de las dos versiones.
 
 `clean_label()` se queda como esta: con el arbol nuevo no tiene nada que quitar, y con el viejo
 sigue haciendo falta.
+
+---
 
 ## [0.14.0] - 2026-08-17
 
