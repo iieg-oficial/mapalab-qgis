@@ -1,3 +1,7 @@
 dist/
 __pycache__/
 *.pyc
+
+*.bak
+*.bak-*
+*.bak.*

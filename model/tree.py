@@ -116,6 +116,8 @@ def clean_label(label: str) -> str:
 
 
 def is_disabled(node: dict[str, Any]) -> bool:
+    if node.get('disabled') is True:
+        return True
     return str(node.get('label') or '').startswith('*')
 
 
