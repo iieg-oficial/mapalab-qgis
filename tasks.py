@@ -16,7 +16,7 @@ PESO_CATALOGO: float = 40.0
 
 class _TareaMapaLab(QgsTask):
 
-    def __init__(self, descripcion: str, flags: Any = QgsTask.CanCancel) -> None:
+    def __init__(self, descripcion: str, flags: Any = QgsTask.Flag.CanCancel) -> None:
         super().__init__(descripcion, flags)
         self._feedback = QgsFeedback()
         self._error: str = ''
@@ -176,7 +176,7 @@ class MetadataTask(_TareaMapaLab):
     fallo = pyqtSignal(str)
 
     def __init__(self, client: MapaLabClient, node: dict[str, Any], layer_id: str) -> None:
-        super().__init__('MapaLab: metadata', QgsTask.CanCancel | QgsTask.Silent)
+        super().__init__('MapaLab: metadata', QgsTask.Flag.CanCancel | QgsTask.Flag.Silent)
         self._client = client
         self._node = node
         self._layer_id = layer_id
@@ -205,7 +205,7 @@ class ConsultaTask(_TareaMapaLab):
     fallo = pyqtSignal(str)
 
     def __init__(self, client: MapaLabClient, url: str) -> None:
-        super().__init__('MapaLab: consulta', QgsTask.CanCancel | QgsTask.Silent)
+        super().__init__('MapaLab: consulta', QgsTask.Flag.CanCancel | QgsTask.Flag.Silent)
         self._client = client
         self._url = url
         self._texto = ''
@@ -233,7 +233,7 @@ class PeriodicidadTask(_TareaMapaLab):
     fallo = pyqtSignal(str)
 
     def __init__(self, client: MapaLabClient, node: dict[str, Any]) -> None:
-        super().__init__('MapaLab: fechas de la capa', QgsTask.CanCancel | QgsTask.Silent)
+        super().__init__('MapaLab: fechas de la capa', QgsTask.Flag.CanCancel | QgsTask.Flag.Silent)
         self._client = client
         self._node = node
         self._periodicidad: dict[str, Any] = {}

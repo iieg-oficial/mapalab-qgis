@@ -18,7 +18,7 @@ def carpeta(*partes: str) -> str:
 
 
 def carpeta_del_servidor(*partes: str) -> str:
-    huella = hashlib.sha1(get_base_url().encode('utf-8')).hexdigest()[:12]
+    huella = hashlib.sha1(get_base_url().encode('utf-8'), usedforsecurity=False).hexdigest()[:12]
     return carpeta('servidores', huella, *partes)
 
 

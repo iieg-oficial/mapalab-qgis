@@ -50,7 +50,7 @@ class MapaLabPlugin:
         if self._dock is None:
             self._dock = MapaLabDock(self._iface, self._iface.mainWindow())
             self._dock.visibilityChanged.connect(self._on_visibility)
-            self._iface.addDockWidget(Qt.RightDockWidgetArea, self._dock)
+            self._iface.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._dock)
             if self._action is not None:
                 self._action.setIcon(self._icon())
         return self._dock

@@ -45,7 +45,8 @@ class HerramientaConsulta(QgsMapTool):
         self._al_consultar = al_consultar
 
     def canvasReleaseEvent(self, evento: Any) -> None:
-        x, y = int(evento.x()), int(evento.y())
+        punto = evento.pixelPoint()
+        x, y = int(punto.x()), int(punto.y())
         node = self._nodo_actual()
 
         if node and node.get('wmsConfig'):

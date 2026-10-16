@@ -114,13 +114,14 @@ class LayerItemDelegate(QStyledItemDelegate):
     def _tenue(self, option: QStyleOptionViewItem, color: str) -> None:
         self._encoger(option.font, TENUE_REDUCCION)
         tinta = QColor(color)
-        option.palette.setColor(QPalette.Text, tinta)
-        option.palette.setColor(QPalette.HighlightedText, tinta)
+        option.palette.setColor(QPalette.ColorRole.Text, tinta)
+        option.palette.setColor(QPalette.ColorRole.HighlightedText, tinta)
 
     def _sin_fondo(self, option: QStyleOptionViewItem) -> None:
-        realzada = bool(option.state & (QStyle.State_MouseOver | QStyle.State_Selected))
-        option.state &= ~QStyle.State_MouseOver
-        option.state &= ~QStyle.State_Selected
+        resaltes = QStyle.StateFlag.State_MouseOver | QStyle.StateFlag.State_Selected
+        realzada = bool(option.state & resaltes)
+        option.state &= ~QStyle.StateFlag.State_MouseOver
+        option.state &= ~QStyle.StateFlag.State_Selected
         if realzada:
             option.font.setBold(True)
 
@@ -135,10 +136,10 @@ class LayerItemDelegate(QStyledItemDelegate):
 
     def _pintar_cerrar(self, painter: QPainter, rect: QRect) -> None:
         pluma = QPen(QColor(color_de_rol('quiet', 'color', '#465055')), CERRAR_TRAZO)
-        pluma.setCapStyle(Qt.RoundCap)
+        pluma.setCapStyle(Qt.PenCapStyle.RoundCap)
 
         painter.save()
-        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setPen(pluma)
         painter.drawLine(rect.topLeft(), rect.bottomRight())
         painter.drawLine(rect.topRight(), rect.bottomLeft())
@@ -151,13 +152,13 @@ class LayerItemDelegate(QStyledItemDelegate):
 
     def _pintar_chevron(self, painter: QPainter, rect: QRect, abierto: bool) -> None:
         pluma = QPen(QColor(color_de_rol('quiet', 'color', '#465055')), CHEVRON_TRAZO)
-        pluma.setCapStyle(Qt.RoundCap)
-        pluma.setJoinStyle(Qt.RoundJoin)
+        pluma.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pluma.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
 
         painter.save()
-        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setPen(pluma)
-        painter.setBrush(Qt.NoBrush)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         if abierto:
             painter.drawPolyline(QPointF(rect.left(), rect.top() + 2.0),
                                  QPointF(rect.center().x(), rect.bottom() - 1.0),
@@ -169,7 +170,7 @@ class LayerItemDelegate(QStyledItemDelegate):
         painter.restore()
 
     def _hay_chevron(self, option: QStyleOptionViewItem, node: Any) -> bool:
-        return bool(option.state & QStyle.State_Children) and not es_etiqueta(node)
+        return bool(option.state & QStyle.StateFlag.State_Children) and not es_etiqueta(node)
 
     def _fuente_menor(self, option: QStyleOptionViewItem) -> QFont:
         font = QFont(option.font)
@@ -184,14 +185,14 @@ class LayerItemDelegate(QStyledItemDelegate):
     def _pintar_pildora(self, painter: QPainter, rect: QRect, texto: str,
                         color: QColor, fuente: QFont) -> None:
         painter.save()
-        painter.setRenderHint(QPainter.Antialiasing, True)
-        painter.setPen(Qt.NoPen)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(color)
         radio = rect.height() / 2.0
         painter.drawRoundedRect(QRectF(rect), radio, radio)
         painter.setPen(QColor('#FFFFFF'))
         painter.setFont(fuente)
-        painter.drawText(rect, int(Qt.AlignCenter), texto)
+        painter.drawText(rect, int(Qt.AlignmentFlag.AlignCenter), texto)
         painter.restore()
 
     def _pintar_barra_tema(self, painter: QPainter, option: QStyleOptionViewItem) -> None:
@@ -199,13 +200,13 @@ class LayerItemDelegate(QStyledItemDelegate):
         top = option.rect.top() + (option.rect.height() - alto) // 2
         rect = QRect(option.rect.left(), top, ACCENT_BAR_WIDTH, alto)
         painter.save()
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(ACCENT_COLOR))
         painter.drawRoundedRect(rect, ACCENT_BAR_WIDTH // 2, ACCENT_BAR_WIDTH // 2)
         painter.restore()
 
     def _tema_abierto(self, option: QStyleOptionViewItem, index: QModelIndex) -> bool:
-        return self._es_raiz(index) and bool(option.state & QStyle.State_Open)
+        return self._es_raiz(index) and bool(option.state & QStyle.StateFlag.State_Open)
 
     def _medir_adornos(self, opcion: QStyleOptionViewItem, rect: QRect,
                        badge: Optional[tuple[str, QColor]], tipo: Optional[str],
@@ -277,7 +278,7 @@ class LayerItemDelegate(QStyledItemDelegate):
         self._pintar_adornos(painter, rect_badge, rect_geom, badge, tipo, fuente_menor)
         if chevron:
             self._pintar_chevron(painter, self._rect_chevron(option.rect),
-                                 bool(option.state & QStyle.State_Open))
+                                 bool(option.state & QStyle.StateFlag.State_Open))
         elif cerrar:
             self._pintar_cerrar(painter, self.rect_cerrar(option.rect))
 

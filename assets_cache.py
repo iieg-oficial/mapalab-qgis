@@ -14,7 +14,7 @@ MISS_SUFIJO: str = '.miss'
 
 
 def _ruta(url: str) -> str:
-    digest = hashlib.sha1(url.encode('utf-8')).hexdigest()[:16]
+    digest = hashlib.sha1(url.encode('utf-8'), usedforsecurity=False).hexdigest()[:16]
     extension = os.path.splitext(url.split('?')[0])[1][:6] or '.bin'
     return os.path.join(carpeta(CACHE_DIR), f'{digest}{extension}')
 

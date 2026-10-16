@@ -18,7 +18,13 @@ from ..model.tree import (
 from .delegate import LayerItemDelegate
 from .icons import TEMA_ICON_SIZE, icono_de_nodo
 
-NODE_ROLE: int = int(Qt.UserRole)
+NODE_ROLE: int = int(Qt.ItemDataRole.UserRole)
+
+
+def posicion(evento: Any) -> Any:
+    if hasattr(evento, 'position'):
+        return evento.position().toPoint()
+    return evento.pos()
 
 
 class ArbolCatalogo(QTreeWidget):
@@ -54,7 +60,7 @@ class ArbolCatalogo(QTreeWidget):
         self.itemExpanded.connect(self._on_expandido)
         self.itemCollapsed.connect(self._on_colapsado)
         self.itemChanged.connect(self._on_marcado)
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._on_menu)
         self._actualizar_cargados()
 
@@ -89,14 +95,15 @@ class ArbolCatalogo(QTreeWidget):
                            lambda: self._al_agregar(node, False, True))
             menu.addAction('Descargar la tabla completa',
                            lambda: self._al_agregar(node, True, True))
-        menu.exec_(self.viewport().mapToGlobal(pos))
+        menu.exec(self.viewport().mapToGlobal(pos))
 
     def mouseReleaseEvent(self, evento: Any) -> None:
-        item = self.itemAt(evento.pos())
+        pos = posicion(evento)
+        item = self.itemAt(pos)
         node = item.data(0, NODE_ROLE) if item is not None else None
         if isinstance(node, dict) and self._delegado.hay_cerrar(node):
-            rect = self._delegado.rect_cerrar(self.visualRect(self.indexAt(evento.pos())))
-            if rect.contains(evento.pos()) and self._al_cerrar is not None:
+            rect = self._delegado.rect_cerrar(self.visualRect(self.indexAt(pos)))
+            if rect.contains(pos) and self._al_cerrar is not None:
                 self._al_cerrar(node)
                 self.viewport().update()
                 return
@@ -158,14 +165,14 @@ class ArbolCatalogo(QTreeWidget):
 
     def _estado(self, node: dict[str, Any]) -> Qt.CheckState:
         cargado = str(node.get('id') or '') in self._grupos
-        return Qt.Checked if cargado else Qt.Unchecked
+        return Qt.CheckState.Checked if cargado else Qt.CheckState.Unchecked
 
     def _on_marcado(self, item: QTreeWidgetItem, column: int) -> None:
         node = item.data(0, NODE_ROLE)
         if self._silencio or self._al_alternar is None or not isinstance(node, dict):
             return
         if es_grupo_declarado(node):
-            self._al_alternar(node, item.checkState(0) == Qt.Checked)
+            self._al_alternar(node, item.checkState(0) == Qt.CheckState.Checked)
 
     def sincronizar(self, item: Optional[QTreeWidgetItem] = None) -> None:
         if item is None:
@@ -195,10 +202,10 @@ class ArbolCatalogo(QTreeWidget):
             item.setIcon(0, icono)
 
     def eventFilter(self, objeto: Any, evento: Any) -> bool:
-        if evento.type() == QEvent.Leave:
+        if evento.type() == QEvent.Type.Leave:
             self._limpiar_hover()
-        elif evento.type() == QEvent.MouseButtonPress:
-            if self.itemAt(evento.pos()) is None:
+        elif evento.type() == QEvent.Type.MouseButtonPress:
+            if self.itemAt(posicion(evento)) is None:
                 self.clearSelection()
                 self.setCurrentItem(None)
         return False

@@ -20,7 +20,7 @@ from qgis.core import (
     QgsVectorLayer,
     QgsVectorLayerSimpleLabeling,
 )
-from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtCore import QMetaType
 
 from ..model.tree import clean_label
 from .filtros import combinar, cql_municipio, es_raster_tiempo, estilo_por_fecha
@@ -205,7 +205,8 @@ def _anotaciones(anotaciones: list[dict[str, Any]]) -> list[QgsVectorLayer]:
         if tipo not in capas:
             capa = QgsVectorLayer(f'{tipo}?crs=EPSG:4326', f'Anotaciones · {tipo}', 'memory')
             capa.dataProvider().addAttributes(
-                [QgsField('tipo', QVariant.String), QgsField('texto', QVariant.String)])
+                [QgsField('tipo', QMetaType.Type.QString),
+                 QgsField('texto', QMetaType.Type.QString)])
             capa.updateFields()
             capas[tipo] = capa
         feature = QgsFeature(capas[tipo].fields())

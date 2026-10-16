@@ -91,7 +91,7 @@ class SwitchModoBase(QWidget):
             boton = QPushButton(etiqueta)
             boton.setCheckable(True)
             boton.setFixedHeight(ALTO)
-            boton.setCursor(Qt.PointingHandCursor)
+            boton.setCursor(Qt.CursorShape.PointingHandCursor)
             boton.setProperty('modo', modo)
             boton.setProperty('posicion', 'izquierda' if indice == 0 else 'derecha')
             boton.clicked.connect(lambda _, elegido=modo: self._al_pulsar(elegido))

@@ -94,10 +94,10 @@ class MapaLabClient:
             raise MapaLabCancelado('Operación cancelada.')
 
         reply = blocking.reply()
-        status = int(reply.attribute(QNetworkRequest.HttpStatusCodeAttribute) or 0)
+        status = int(reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute) or 0)
         content = bytes(reply.content())
 
-        if error != QgsBlockingNetworkRequest.NoError and status != 304:
+        if error != QgsBlockingNetworkRequest.ErrorCode.NoError and status != 304:
             if status >= 400:
                 raise MapaLabError(f'El servidor respondió {status}. {_describe(content)}')
             raise MapaLabError(blocking.errorMessage() or 'Error de red')

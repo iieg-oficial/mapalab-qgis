@@ -16,7 +16,7 @@ from qgis.core import (
     QgsVectorLayer,
     QgsWkbTypes,
 )
-from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtCore import QMetaType
 from qgis.PyQt.QtGui import QColor
 
 from ..config import DATA_CRS
@@ -35,23 +35,30 @@ ANCHO_BORDE: str = '0.5'
 
 TAMANO_PUNTO: str = '3'
 
-TIPOS_SOPORTADOS: set = {
-    QVariant.Bool,
-    QVariant.Date,
-    QVariant.DateTime,
-    QVariant.Double,
-    QVariant.Int,
-    QVariant.LongLong,
-    QVariant.String,
-    QVariant.Time,
-}
+
+def _codigo(tipo: Any) -> int:
+    return int(getattr(tipo, 'value', tipo))
+
+
+CODIGO_TEXTO: int = _codigo(QMetaType.Type.QString)
+
+TIPOS_SOPORTADOS: frozenset = frozenset(_codigo(tipo) for tipo in (
+    QMetaType.Type.Bool,
+    QMetaType.Type.QDate,
+    QMetaType.Type.QDateTime,
+    QMetaType.Type.Double,
+    QMetaType.Type.Int,
+    QMetaType.Type.LongLong,
+    QMetaType.Type.QString,
+    QMetaType.Type.QTime,
+))
 
 
 def _colores() -> tuple[str, str]:
     borde = QColor(color_de_rol('primary', 'background-color', '#5C2472'))
     relleno = QColor(borde)
     relleno.setAlpha(ALPHA_RELLENO)
-    return relleno.name(QColor.HexArgb), borde.name()
+    return relleno.name(QColor.NameFormat.HexArgb), borde.name()
 
 
 def _color_resalte() -> QColor:
@@ -62,10 +69,10 @@ def _color_resalte() -> QColor:
 
 def _simbolo(capa: QgsVectorLayer) -> Any:
     relleno, borde = _colores()
-    if capa.geometryType() == QgsWkbTypes.PointGeometry:
+    if capa.geometryType() == Qgis.GeometryType.Point:
         return QgsMarkerSymbol.createSimple(
             {'color': relleno, 'outline_color': borde, 'size': TAMANO_PUNTO})
-    if capa.geometryType() == QgsWkbTypes.LineGeometry:
+    if capa.geometryType() == Qgis.GeometryType.Line:
         return QgsLineSymbol.createSimple({'color': borde, 'width': ANCHO_BORDE})
     return QgsFillSymbol.createSimple(
         {'color': relleno, 'outline_color': borde, 'outline_width': ANCHO_BORDE})
@@ -78,7 +85,7 @@ def _es_estructura(valor: Any) -> bool:
 def _campos_utiles(feature: QgsFeature) -> list[QgsField]:
     utiles: list[QgsField] = []
     for campo in feature.fields():
-        if campo.type() not in TIPOS_SOPORTADOS:
+        if _codigo(campo.type()) not in TIPOS_SOPORTADOS:
             continue
         if _es_estructura(feature[campo.name()]):
             continue
@@ -94,7 +101,7 @@ def _copiar_atributos(destino: QgsFeature, origen: QgsFeature, campos: QgsFields
         valor: Any = origen[campo.name()]
         if QgsVariantUtils.isNull(valor) or _es_estructura(valor):
             continue
-        if campos.at(indice).type() == QVariant.String and not isinstance(valor, str):
+        if _codigo(campos.at(indice).type()) == CODIGO_TEXTO and not isinstance(valor, str):
             valor = str(valor)
         destino.setAttribute(indice, valor)
 
@@ -113,7 +120,7 @@ def _crear(node_id: str, nombre: str, feature: QgsFeature) -> Optional[QgsVector
         return None
 
     campos = _campos_utiles(feature)
-    campos.append(QgsField(CAMPO_ORIGEN, QVariant.String))
+    campos.append(QgsField(CAMPO_ORIGEN, QMetaType.Type.QString))
     capa.dataProvider().addAttributes(campos)
     capa.updateFields()
     capa.setCustomProperty(SELECCION_PROPERTY, node_id)

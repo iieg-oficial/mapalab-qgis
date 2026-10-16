@@ -3,31 +3,30 @@ set -e
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DESTINO="$REPO_ROOT/theme.qss"
-MARCA="${MARIACHI_MARCA:-iieg}"
-RUTA="mel/$MARCA/artefactos/tokens.qss"
+ENCABEZADO='/* Generado desde el manual de identidad. No editar a mano. */'
 
 if [ -n "$1" ]; then
-    cp "$1" "$DESTINO"
-    echo "theme.qss actualizado desde $1"
-    exit 0
-fi
-
-if [ -z "$MARIACHI_URL" ] || [ -z "$MARIACHI_TOKEN" ]; then
-    echo "Faltan MARIACHI_URL y MARIACHI_TOKEN, o la ruta a un tokens.qss ya descargado." >&2
+    ORIGEN="$1"
+elif [ -n "$TOKENS_URL" ]; then
+    ORIGEN=$(mktemp)
+    trap 'rm -f "$ORIGEN"' EXIT
+    if [ -n "$TOKENS_AUTH" ]; then
+        curl -fsS -H "Authorization: Bearer $TOKENS_AUTH" "$TOKENS_URL" -o "$ORIGEN"
+    else
+        curl -fsS "$TOKENS_URL" -o "$ORIGEN"
+    fi
+else
+    echo "Falta la ruta a un tokens.qss o TOKENS_URL." >&2
     echo "  make tokens ARCHIVO=~/Descargas/tokens.qss" >&2
-    echo "  MARIACHI_URL=https://<gateway> MARIACHI_TOKEN=<jwt> make tokens" >&2
+    echo "  TOKENS_URL=<url del tokens.qss> TOKENS_AUTH=<token> make tokens" >&2
     exit 1
 fi
 
-TMP=$(mktemp)
-curl -fsS -H "Authorization: Bearer $MARIACHI_TOKEN" \
-    "$MARIACHI_URL/api/mariachi/$RUTA" -o "$TMP"
-
-if ! head -1 "$TMP" | grep -q 'Generado por mariachi'; then
-    echo "La respuesta no es el artefacto de MEL." >&2
-    rm -f "$TMP"
+if ! grep -q 'brandRole' "$ORIGEN"; then
+    echo "El archivo no trae los roles de la identidad (brandRole): no es un tokens.qss." >&2
     exit 1
 fi
 
-mv "$TMP" "$DESTINO"
-echo "theme.qss actualizado desde $MARIACHI_URL"
+{ echo "$ENCABEZADO"; sed '1{/^\/\*.*\*\/$/d}' "$ORIGEN"; } > "$DESTINO.tmp"
+mv "$DESTINO.tmp" "$DESTINO"
+echo "theme.qss actualizado"

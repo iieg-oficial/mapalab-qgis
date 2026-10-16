@@ -50,7 +50,7 @@ class CompartidoTask(_TareaMapaLab):
     fallo = pyqtSignal(str)
 
     def __init__(self, client: MapaLabClient, codigo: str, arbol: list[dict[str, Any]]) -> None:
-        super().__init__('MapaLab: mapa compartido', QgsTask.CanCancel | QgsTask.Silent)
+        super().__init__('MapaLab: mapa compartido', QgsTask.Flag.CanCancel | QgsTask.Flag.Silent)
         self._client = client
         self._codigo = codigo
         self._arbol = arbol
@@ -78,8 +78,8 @@ class CompartidoTask(_TareaMapaLab):
             capa.fecha = cql_fecha(columna_de(capa.node, columna), anio, mes)
             capa.cql = combinar(capa.cql, capa.fecha)
             capa.falta_fecha = False
-            capa.nota = ' · '.join(p for p in (sufijo(Filtro([], anio, mes), []),
-                                                '' if capa.visible else 'oculta') if p)
+            partes = (sufijo(Filtro([], anio, mes), []), '' if capa.visible else 'oculta')
+            capa.nota = ' · '.join(parte for parte in partes if parte)
 
     def run(self) -> bool:
         try:

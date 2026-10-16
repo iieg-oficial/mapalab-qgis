@@ -71,4 +71,4 @@ class Operaciones:
         canvas = self._iface.mapCanvas() if self._iface is not None else None
         dialogo = DialogoCompartido(self._client, self._tareas, self._arbol, canvas,
                                     self._mensaje, self._parent)
-        dialogo.exec_()
+        dialogo.exec()

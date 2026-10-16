@@ -1,4 +1,4 @@
-.PHONY: zip verify tokens link
+.PHONY: zip verify scan tokens link
 
 ##@ Complemento
 
@@ -14,7 +14,13 @@ verify: ## Comprobar que el zip coincide con el repositorio
 	rule
 	./scripts/verify-zip.sh
 
-tokens: ## Traer el theme.qss del modulo Identidad de mariachi
+scan: ## Correr sobre el zip los escaneres que bloquean la publicacion
+	@$(LIB)
+	banner 'SCAN' 'bandit y detect-secrets'
+	rule
+	./scripts/scan.sh
+
+tokens: ## Actualizar theme.qss desde el manual de identidad
 	@$(LIB)
 	banner 'TOKENS' 'identidad visual'
 	rule

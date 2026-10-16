@@ -35,10 +35,10 @@ def _ajustar(dialogo: QWidget) -> None:
 def abrir_ficha(capa: QgsVectorLayer, feature: QgsFeature,
                 parent: Optional[QWidget] = None) -> Any:
     contexto = QgsAttributeEditorContext()
-    contexto.setFormMode(QgsAttributeEditorContext.StandaloneDialog)
+    contexto.setFormMode(QgsAttributeEditorContext.FormMode.StandaloneDialog)
 
     dialogo = QgsAttributeDialog(capa, feature, False, parent, True, contexto)
-    dialogo.setMode(QgsAttributeEditorContext.IdentifyMode)
+    dialogo.setMode(QgsAttributeEditorContext.Mode.IdentifyMode)
     dialogo.setWindowTitle(capa.name())
     dialogo.show()
     _ajustar(dialogo)

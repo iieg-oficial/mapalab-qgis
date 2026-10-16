@@ -21,7 +21,7 @@ from ..layers.filtros import (
 from ..layers.grupos import es_grupo, hojas_de
 from ..layers.proyecto import capa_por_nodo
 from ..tasks import Coordinador, PeriodicidadTask
-from ..theme import set_role
+from ..theme import color_de_rol, set_role
 
 AYUDA_MUNICIPIO: str = ('Filtra la capa por municipio. Aplica al mapa, a la consulta por clic '
                         'y a la descarga.')
@@ -34,12 +34,19 @@ CLAVE_TAREA: str = 'periodicidad'
 Listo = Callable[[Filtro, Optional[str]], None]
 
 
+TAMANO_AYUDA: int = 18
+
+
 def _ayuda(texto: str) -> QLabel:
     etiqueta = QLabel('?')
     etiqueta.setToolTip(texto)
-    etiqueta.setAlignment(Qt.AlignCenter)
-    etiqueta.setFixedSize(18, 18)
-    set_role(etiqueta, 'badge')
+    etiqueta.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    etiqueta.setFixedSize(TAMANO_AYUDA, TAMANO_AYUDA)
+    fondo = color_de_rol('badge', 'background-color', '#FF8300')
+    tinta = color_de_rol('primary', 'color', '#FFFFFF')
+    etiqueta.setStyleSheet(
+        f'QLabel {{ background-color: {fondo}; color: {tinta}; padding: 0px;'
+        f' border-radius: {TAMANO_AYUDA // 2}px; font-size: 11px; font-weight: 700; }}')
     return etiqueta
 
 
@@ -105,7 +112,8 @@ class ControlFiltros:
         self._municipios.clear()
         for municipio in sorted(self._client.municipios, key=lambda m: str(m.get('nombre'))):
             self._municipios.addItemWithCheckState(
-                str(municipio.get('nombre') or ''), Qt.Unchecked, str(municipio.get('clave')))
+                str(municipio.get('nombre') or ''), Qt.CheckState.Unchecked,
+                str(municipio.get('clave')))
         self._silencio = False
 
     def olvidar(self) -> None:
@@ -189,7 +197,8 @@ class ControlFiltros:
         self._fila_municipio(campo and self._municipios.count() > 0)
         for indice in range(self._municipios.count()):
             marcado = self._municipios.itemData(indice) in filtro.municipios
-            self._municipios.setItemCheckState(indice, Qt.Checked if marcado else Qt.Unchecked)
+            estado = Qt.CheckState.Checked if marcado else Qt.CheckState.Unchecked
+            self._municipios.setItemCheckState(indice, estado)
 
         disponibles = periodos[0] if periodos else {}
         self._fila_fecha(bool(disponibles))
@@ -226,7 +235,7 @@ class ControlFiltros:
         for indice in range(self._municipios.count()):
             if self._municipios.itemData(indice) in ZMG:
                 self._municipios.setItemCheckState(
-                    indice, Qt.Checked if marcar else Qt.Unchecked)
+                    indice, Qt.CheckState.Checked if marcar else Qt.CheckState.Unchecked)
         self._silencio = False
         self._cambio()
 

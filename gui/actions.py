@@ -37,7 +37,7 @@ class LayerActions:
 
     def _busy(self, active: bool) -> None:
         if active:
-            QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            QApplication.setOverrideCursor(QCursor(Qt.CursorShape.WaitCursor))
         else:
             QApplication.restoreOverrideCursor()
         QCoreApplication.processEvents()

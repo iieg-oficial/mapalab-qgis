@@ -62,9 +62,9 @@ class _SombraEnHover(QObject):
         widget.installEventFilter(self)
 
     def eventFilter(self, objeto: QObject, evento) -> bool:
-        if evento.type() == QEvent.Enter:
+        if evento.type() == QEvent.Type.Enter:
             self._efecto.setEnabled(True)
-        elif evento.type() == QEvent.Leave:
+        elif evento.type() == QEvent.Type.Leave:
             self._efecto.setEnabled(False)
         return False
 
@@ -139,7 +139,7 @@ def apply_theme(widget: QWidget) -> bool:
 
 def set_role(widget: QWidget, role: Optional[str]) -> None:
     widget.setProperty(BRAND_ROLE, role)
-    widget.setAttribute(Qt.WA_StyledBackground, True)
+    widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
     style = widget.style()
     if style is not None:
         style.unpolish(widget)
