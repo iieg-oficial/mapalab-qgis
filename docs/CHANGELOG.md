@@ -11,6 +11,34 @@ CHANGELOG de aquel repositorio, entre sus versiones 1.117.0 y 1.128.1.
 
 ---
 
+## [0.16.0] - 2026-10-16
+
+Fases 3 y 4 del plan. Probado en QGIS 3.40 headless contra el gateway local.
+
+### Agregado
+
+- **Filtro por municipio y por fecha** debajo del arbol. Municipio aparece si la capa declara su
+  campo (`searchMeta.municipioField`), con boton ZMG; fecha, si `/periodicity` trae periodos o si es
+  un raster con `timeEnabled`. Arranca en el periodo del visor (`defaultDate`: el ultimo mes con
+  `latest`, el ano completo con `{year}`). Cambiar el filtro actualiza la capa ya cargada y su
+  nombre («Feminicidios (tasa) · ago 2026 · ZMG»). Aplica tambien a la consulta por clic y a la
+  descarga, que guarda el periodo y los municipios en el nombre del archivo. En grupos solo aplica
+  el municipio, y cambiarlo rearma el grupo.
+- Los rasters con dimension `TIME` mandan `TIME=AAAA-MM-01` y su estilo del mes (`timeStylePattern`).
+- **Abrir mapa compartido** (menu Web → MapaLab y boton del panel): acepta el enlace del visor
+  (`?s=` o `?share=`) o el codigo de 10 letras, muestra las capas antes de agregarlas y las monta en
+  un grupo «Mapa compartido · <codigo>» con su orden, visibilidad, opacidad, filtros, municipios y
+  limites IIEG/INEGI; encuadra la vista y trae opcionalmente un mapa base y las anotaciones (texto
+  plano). El mapa base es OpenStreetMap: los raster de CARTO piden llave y sin ella llegan con
+  marca de agua. De un compartido de dos paneles toma el activo. Si una capa con fecha por defecto
+  llega sin fecha, se aplica la del visor en vez de dibujarla vacia.
+
+### Cambiado
+
+- Las capas temporales ya no entran con todos los periodos encimados: entran con el del visor.
+
+---
+
 ## [0.15.0] - 2026-10-16
 
 Sale de la auditoria del 2026-10-16. Todo se probo en QGIS 3.40 headless contra el gateway local.

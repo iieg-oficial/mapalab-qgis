@@ -12,6 +12,8 @@ MENU_TITLE: str = 'MapaLab'
 
 TEXTO_SERVIDOR: str = 'Cambiar servidor…'
 
+TEXTO_COMPARTIDO: str = 'Abrir mapa compartido…'
+
 
 class MapaLabPlugin:
 
@@ -19,6 +21,7 @@ class MapaLabPlugin:
         self._iface = iface
         self._action: Optional[QAction] = None
         self._servidor: Optional[QAction] = None
+        self._compartido: Optional[QAction] = None
         self._dock: Optional[MapaLabDock] = None
 
     def _icon(self) -> QIcon:
@@ -35,9 +38,12 @@ class MapaLabPlugin:
 
         self._servidor = QAction(TEXTO_SERVIDOR, self._iface.mainWindow())
         self._servidor.triggered.connect(self._cambiar_servidor)
+        self._compartido = QAction(TEXTO_COMPARTIDO, self._iface.mainWindow())
+        self._compartido.triggered.connect(self._abrir_compartido)
 
         self._iface.addToolBarIcon(self._action)
         self._iface.addPluginToWebMenu(MENU_TITLE, self._action)
+        self._iface.addPluginToWebMenu(MENU_TITLE, self._compartido)
         self._iface.addPluginToWebMenu(MENU_TITLE, self._servidor)
 
     def _asegurar_dock(self) -> MapaLabDock:
@@ -58,6 +64,11 @@ class MapaLabPlugin:
         dock.raise_()
         dock.mostrar_servidor()
 
+    def _abrir_compartido(self) -> None:
+        dock = self._asegurar_dock()
+        dock.setVisible(True)
+        dock.abrir_compartido()
+
     def _on_visibility(self, visible: bool) -> None:
         if self._action is not None:
             self._action.setChecked(visible)
@@ -74,6 +85,8 @@ class MapaLabPlugin:
             self._iface.removePluginWebMenu(MENU_TITLE, self._action)
             self._action = None
 
-        if self._servidor is not None:
-            self._iface.removePluginWebMenu(MENU_TITLE, self._servidor)
-            self._servidor = None
+        for accion in (self._servidor, self._compartido):
+            if accion is not None:
+                self._iface.removePluginWebMenu(MENU_TITLE, accion)
+        self._servidor = None
+        self._compartido = None

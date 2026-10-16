@@ -45,14 +45,20 @@ def fila_acciones(al_agregar: Any, al_descargar: Any,
     return fila, agregar, descargar
 
 
-def fila_limpieza(al_limpiar_seleccion: Any) -> QHBoxLayout:
+def fila_limpieza(al_limpiar_seleccion: Any, al_abrir_compartido: Any) -> QHBoxLayout:
     boton = QPushButton('Limpiar seleccionados')
     boton.setToolTip('Quita las capas de selección que dejó la consulta por clic.')
     boton.clicked.connect(al_limpiar_seleccion)
     set_role(boton, 'quiet')
 
+    compartido = QPushButton('Abrir compartido')
+    compartido.setToolTip('Trae al proyecto un mapa compartido desde el visor.')
+    compartido.clicked.connect(al_abrir_compartido)
+    set_role(compartido, 'quiet')
+
     fila = QHBoxLayout()
     fila.addStretch(1)
     fila.addWidget(boton)
+    fila.addWidget(compartido)
     fila.addStretch(1)
     return fila

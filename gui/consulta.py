@@ -5,6 +5,7 @@ from qgis.gui import QgsMapTool, QgsMapToolPan
 
 from ..api.client import MapaLabClient
 from ..config import CAPAS_BASE, NODE_ID_PROPERTY
+from ..layers.filtros import Parametros
 from ..layers.featureinfo import config_de_capa, features_de_json, url_de_consulta
 from ..layers.limites import modo_actual
 from ..layers.proyecto import capa_por_nodo, clave_de_capa, es_del_catalogo
@@ -34,11 +35,13 @@ class HerramientaConsulta(QgsMapTool):
 
     def __init__(self, canvas: Any, client: MapaLabClient, tareas: Coordinador,
                  nodo_actual: Callable[[], Optional[dict[str, Any]]],
-                 al_consultar: Callable[[Optional[tuple], str], None]) -> None:
+                 al_consultar: Callable[[Optional[tuple], str], None],
+                 parametros_de: Callable[[dict[str, Any]], Parametros]) -> None:
         super().__init__(canvas)
         self._client = client
         self._tareas = tareas
         self._nodo_actual = nodo_actual
+        self._parametros_de = parametros_de
         self._al_consultar = al_consultar
 
     def canvasReleaseEvent(self, evento: Any) -> None:
@@ -48,9 +51,12 @@ class HerramientaConsulta(QgsMapTool):
         if node and node.get('wmsConfig'):
             capa = capa_por_nodo(str(node.get('id') or ''))
             if capa is None:
+                params = self._parametros_de(node)
+                config = dict(node['wmsConfig'], cqlFilter=params.cql)
+                extra = {'TIME': params.time_value} if params.time_value else None
                 self._consultar([_Destino(str(node.get('id') or ''),
                                           clean_label(node.get('label') or ''),
-                                          node['wmsConfig'], None)], x, y)
+                                          config, extra)], x, y)
             else:
                 self._consultar([_destino_de_capa(capa)], x, y)
             return

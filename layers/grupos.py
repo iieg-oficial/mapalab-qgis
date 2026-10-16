@@ -5,6 +5,7 @@ from qgis.core import QgsLayerTreeGroup, QgsMapLayer, QgsProject
 
 from ..config import NODE_ID_PROPERTY
 from ..model.tree import clean_label, iter_leaves, layer_key, node_cql
+from .filtros import combinar, cql_municipio
 from .proyecto import GRUPO_PROPERTY, quitar_grupos_vacios
 from .wms import crear_wms_layer
 
@@ -75,7 +76,8 @@ def _nombre(hojas: list[dict[str, Any]], etiqueta_grupo: str) -> str:
 
 
 def add_group_layers(node: dict[str, Any], modo: Optional[str] = None,
-                     completa: bool = False) -> tuple[int, str, str]:
+                     completa: bool = False, municipios: Optional[list[str]] = None,
+                     catalogo: Optional[list[dict[str, Any]]] = None) -> tuple[int, str, str]:
     hojas = hojas_de(node)
     tablas = por_tabla(hojas)
     if not tablas:
@@ -91,6 +93,7 @@ def add_group_layers(node: dict[str, Any], modo: Optional[str] = None,
     for hojas_tabla in tablas.values():
         nombre = _nombre(hojas_tabla, etiqueta)
         cql, motivo = ('', '') if completa else cql_de_tabla(hojas_tabla)
+        cql = combinar(cql, cql_municipio(hojas_tabla[0], municipios or [], catalogo or []))
         capa, razon = crear_wms_layer(hojas_tabla[0], cql, None, modo, nombre)
         if capa is None:
             fallo = razon

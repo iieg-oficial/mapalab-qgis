@@ -26,11 +26,12 @@ def _base_url_with_params(wms_config: dict[str, Any], cql_filter: str,
 
 
 def build_wms_uri(wms_config: dict[str, Any], cql_filter: str = '',
-                  time_value: Optional[str] = None, modo: Optional[str] = None) -> str:
+                  time_value: Optional[str] = None, modo: Optional[str] = None,
+                  estilo: str = '') -> str:
     uri = QgsDataSourceUri()
     uri.setParam('url', _base_url_with_params(wms_config, cql_filter, time_value, modo))
     uri.setParam('layers', wms_config.get('layerName') or '')
-    uri.setParam('styles', wms_config.get('styles') or '')
+    uri.setParam('styles', estilo or wms_config.get('styles') or '')
     uri.setParam('format', wms_config.get('format') or 'image/png')
     uri.setParam('crs', wms_config.get('crs') or DATA_CRS)
     uri.setParam('maxWidth', str(TILE_SIZE))
@@ -74,12 +75,12 @@ def con_env(uri_actual: str, modo: Optional[str]) -> str:
 
 def crear_wms_layer(node: dict[str, Any], cql_filter: str = '',
                     time_value: Optional[str] = None, modo: Optional[str] = None,
-                    nombre: str = '') -> tuple[Optional[QgsRasterLayer], str]:
+                    nombre: str = '', estilo: str = '') -> tuple[Optional[QgsRasterLayer], str]:
     wms_config = node.get('wmsConfig')
     if not wms_config:
         return None, 'La capa no trae configuración WMS.'
 
-    uri = build_wms_uri(wms_config, cql_filter, time_value, modo)
+    uri = build_wms_uri(wms_config, cql_filter, time_value, modo, estilo)
     name = nombre or clean_label(
         node.get('label') or wms_config.get('layerName') or 'MapaLab')
 
@@ -92,16 +93,16 @@ def crear_wms_layer(node: dict[str, Any], cql_filter: str = '',
     return layer, ''
 
 
-def capa_existente(node: dict[str, Any], apply_node_filter: bool = False,
-                   time_value: Optional[str] = None,
-                   modo: Optional[str] = None) -> Optional[QgsMapLayer]:
-    wms_config = node.get('wmsConfig') or {}
-    cql_filter = (wms_config.get('cqlFilter') or '') if apply_node_filter else ''
-    uri = build_wms_uri(wms_config, cql_filter, time_value, modo)
+def capa_por_uri(uri: str) -> Optional[QgsMapLayer]:
     for capa in QgsProject.instance().mapLayers().values():
         if capa.providerType() == 'wms' and capa.source() == uri:
             return capa
     return None
+
+
+def reconfigurar(capa: QgsMapLayer, uri: str, nombre: str) -> None:
+    capa.setDataSource(uri, nombre, 'wms')
+    capa.triggerRepaint()
 
 
 def add_wms_layer(node: dict[str, Any], apply_node_filter: bool = False,

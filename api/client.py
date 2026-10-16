@@ -65,6 +65,7 @@ class MapaLabClient:
     def __init__(self) -> None:
         self._tree: Optional[list[dict[str, Any]]] = None
         self.desde_cache: bool = False
+        self.municipios: list[dict[str, Any]] = []
 
     def olvidar(self) -> None:
         self._tree = None
@@ -167,17 +168,30 @@ class MapaLabClient:
         return self._get_json(
             '/metadata/', {'workspace': workspace, 'layer': layer}, feedback=feedback)
 
-    def fetch_periodicity(self, workspace: str, layer: str) -> dict[str, Any]:
-        payload = self._get_json('/periodicity/', {'workspace': workspace, 'layer': layer})
-        if isinstance(payload, dict):
-            return payload.get('periodicity') or {}
-        return {}
+    def fetch_periodicity(self, workspace: str, layer: str,
+                          feedback: Optional[QgsFeedback] = None,
+                          ) -> tuple[dict[str, Any], Optional[str]]:
+        payload = self._get_json(
+            '/periodicity/', {'workspace': workspace, 'layer': layer}, feedback=feedback)
+        if not isinstance(payload, dict):
+            return {}, None
+        periodicidad = payload.get('periodicity')
+        columna = payload.get('column')
+        return (periodicidad if isinstance(periodicidad, dict) else {},
+                str(columna) if columna else None)
 
-    def fetch_municipios(self) -> list[dict[str, Any]]:
-        payload = self._get_json('/municipios/', {})
+    def fetch_municipios(self, feedback: Optional[QgsFeedback] = None) -> list[dict[str, Any]]:
+        payload = self._get_json('/municipios/', {}, feedback=feedback)
         if isinstance(payload, dict):
-            return payload.get('items') or []
+            items = payload.get('items') or []
+            return [item for item in items if isinstance(item, dict)]
         return []
+
+    def fetch_share(self, codigo: str, feedback: Optional[QgsFeedback] = None) -> dict[str, Any]:
+        payload = self._get_json(f'/shares/{codigo}', {}, feedback=feedback)
+        if not isinstance(payload, dict) or not isinstance(payload.get('payload'), dict):
+            raise MapaLabError('El mapa compartido no trae capas.')
+        return payload
 
     def descargar(self, url: str, timeout_ms: int,
                   feedback: Optional[QgsFeedback] = None,
