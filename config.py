@@ -7,7 +7,7 @@ from qgis.PyQt.QtCore import QSettings
 SETTINGS_GROUP: str = 'mapalab'
 SETTINGS_BASE_URL: str = f'{SETTINGS_GROUP}/base_url'
 
-DEFAULT_BASE_URL: str = ''
+DEFAULT_BASE_URL: str = 'https://iieg.jalisco.gob.mx'
 
 
 def _version() -> str:

@@ -32,7 +32,7 @@ def _desde_svg(datos: bytes, tamano: int = ICON_SIZE) -> Optional[QIcon]:
         return None
 
     from qgis.PyQt.QtGui import QPainter
-    imagen = QImage(tamano, tamano, QImage.Format_ARGB32)
+    imagen = QImage(tamano, tamano, QImage.Format.Format_ARGB32)
     imagen.fill(0)
     painter = QPainter(imagen)
     renderer.render(painter)

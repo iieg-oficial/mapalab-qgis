@@ -9,6 +9,7 @@ TIPOS: tuple[str, ...] = ('point', 'line', 'polygon', 'raster')
 def color_glifo() -> str:
     return color_de_selector('QTreeView::item:selected', 'color', '#A85700')
 
+
 VIEWBOX: float = 24.0
 
 TRAZO: float = 1.8
@@ -39,18 +40,18 @@ def _camino(tipo: str, cerrado: bool) -> QPainterPath:
 
 
 def _pintar_vertices(painter: QPainter, tipo: str, color: QColor) -> None:
-    painter.setPen(Qt.NoPen)
+    painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(color)
     for x, y, radio in VERTICES.get(tipo, ()):
         painter.drawEllipse(QPointF(x, y), radio, radio)
 
 
 def _pintar_raster(painter: QPainter, suave: QColor) -> None:
-    painter.setBrush(Qt.NoBrush)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
     painter.drawRoundedRect(QRectF(4.0, 4.0, 16.0, 16.0), 1.5, 1.5)
     painter.drawLine(QPointF(12.0, 4.0), QPointF(12.0, 20.0))
     painter.drawLine(QPointF(4.0, 12.0), QPointF(20.0, 12.0))
-    painter.setPen(Qt.NoPen)
+    painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(suave)
     painter.drawRect(QRectF(4.0, 4.0, 8.0, 8.0))
     painter.drawRect(QRectF(12.0, 12.0, 8.0, 8.0))
@@ -62,11 +63,11 @@ def pintar_geometria(painter: QPainter, rect: QRect, tipo: str) -> None:
     suave.setAlpha(RELLENO_ALPHA)
 
     pluma = QPen(color, TRAZO)
-    pluma.setJoinStyle(Qt.RoundJoin)
-    pluma.setCapStyle(Qt.RoundCap)
+    pluma.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+    pluma.setCapStyle(Qt.PenCapStyle.RoundCap)
 
     painter.save()
-    painter.setRenderHint(QPainter.Antialiasing, True)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
     painter.translate(rect.left(), rect.top())
     painter.scale(rect.width() / VIEWBOX, rect.height() / VIEWBOX)
     painter.setPen(pluma)
@@ -76,7 +77,7 @@ def pintar_geometria(painter: QPainter, rect: QRect, tipo: str) -> None:
     elif tipo == 'point':
         _pintar_vertices(painter, tipo, color)
     else:
-        painter.setBrush(suave if tipo == 'polygon' else Qt.NoBrush)
+        painter.setBrush(suave if tipo == 'polygon' else Qt.BrushStyle.NoBrush)
         painter.drawPath(_camino(tipo, tipo == 'polygon'))
         _pintar_vertices(painter, tipo, color)
 

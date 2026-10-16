@@ -54,6 +54,7 @@ def build_wfs_url(wms_config: dict[str, Any], type_name: str, cql_filter: str = 
 def download_vector(node: dict[str, Any], client: MapaLabClient, target_dir: str,
                     apply_node_filter: bool = False,
                     extra_cql: str = '',
+                    sufijo: str = '',
                     feedback: Optional[QgsFeedback] = None,
                     on_progress: Optional[Callable[[int, int], None]] = None,
                     ) -> tuple[Optional[str], str]:
@@ -79,6 +80,8 @@ def download_vector(node: dict[str, Any], client: MapaLabClient, target_dir: str
     nombre = _safe_name(type_name)
     if apply_node_filter and wms_config.get('cqlFilter'):
         nombre = f"{nombre}_{_safe_name(str(node.get('id') or ''))}"
+    if sufijo:
+        nombre = f'{nombre}_{_safe_name(sufijo)}'
 
     try:
         contenido = client.descargar(

@@ -11,9 +11,68 @@ CHANGELOG de aquel repositorio, entre sus versiones 1.117.0 y 1.128.1.
 
 ---
 
+## [0.17.0] - 2026-10-16
+
+Listo para el repositorio oficial de complementos de QGIS. Probado en QGIS 3.40 y 4.0.
+
+### Agregado
+
+- **Soporte de QGIS 4** (Qt 6): enums con su nombre completo, `QMetaType` en lugar de `QVariant`,
+  `exec()`, posicion del mouse compatible y `QSvgWidget` desde `QtSvgWidgets` cuando hace falta. El
+  mismo codigo corre en 3.40 y en 4.x; `qgisMaximumVersion=4.99`.
+- `make scan`: corre sobre el zip Bandit y detect-secrets, los escaneres que bloquean una version en
+  el repositorio oficial, y flake8 como informe.
+- README en ingles con instalacion, uso y requisitos, y GIFs de la busqueda con filtros, la consulta
+  por clic y los mapas compartidos.
+
+### Cambiado
+
+- `metadata.txt` con descripcion en ingles, el changelog de las ultimas versiones y
+  `experimental=True` para la primera publicacion.
+- `make tokens` toma la direccion del `tokens.qss` de `TOKENS_URL` y su token de `TOKENS_AUTH`; ya no
+  hay rutas de servicios internos en el repositorio.
+- El boton de ayuda de los filtros se ve como un circulo con «?».
+- El servidor viene configurado como `https://iieg.jalisco.gob.mx`: el panel carga el catalogo al
+  abrirse sin preguntar. Otro servidor se pone desde «Cambiar servidor…».
+
+### Corregido
+
+- Bandit marcaba dos hallazgos altos por SHA-1 en los nombres de la cache; se declara
+  `usedforsecurity=False`, porque no protege nada.
+
+---
+
+## [0.16.0] - 2026-10-16
+
+Probado en QGIS 3.40.
+
+### Agregado
+
+- **Filtro por municipio y por fecha** debajo del arbol. Municipio aparece si la capa declara su
+  campo (`searchMeta.municipioField`), con boton ZMG; fecha, si `/periodicity` trae periodos o si es
+  un raster con `timeEnabled`. Arranca en el periodo del visor (`defaultDate`: el ultimo mes con
+  `latest`, el ano completo con `{year}`). Cambiar el filtro actualiza la capa ya cargada y su
+  nombre («Feminicidios (tasa) · ago 2026 · ZMG»). Aplica tambien a la consulta por clic y a la
+  descarga, que guarda el periodo y los municipios en el nombre del archivo. En grupos solo aplica
+  el municipio, y cambiarlo rearma el grupo.
+- Los rasters con dimension `TIME` mandan `TIME=AAAA-MM-01` y su estilo del mes (`timeStylePattern`).
+- **Abrir mapa compartido** (menu Web → MapaLab y boton del panel): acepta el enlace del visor
+  (`?s=` o `?share=`) o el codigo de 10 letras, muestra las capas antes de agregarlas y las monta en
+  un grupo «Mapa compartido · <codigo>» con su orden, visibilidad, opacidad, filtros, municipios y
+  limites IIEG/INEGI; encuadra la vista y trae opcionalmente un mapa base y las anotaciones (texto
+  plano). El mapa base es OpenStreetMap: los raster de CARTO piden llave y sin ella llegan con
+  marca de agua. De un compartido de dos paneles toma el activo. Si una capa con fecha por defecto
+  llega sin fecha, se aplica la del visor en vez de dibujarla vacia.
+
+### Cambiado
+
+- Las capas temporales ya no entran con todos los periodos encimados: entran con el del visor.
+
+---
+
 ## [0.15.0] - 2026-10-16
 
-Sale de la auditoria del 2026-10-16. Todo se probo en QGIS 3.40 headless contra el gateway local.
+Revision completa del complemento. Probado en QGIS 3.40.
 
 ### Agregado
 
@@ -62,11 +121,10 @@ Sale de la auditoria del 2026-10-16. Todo se probo en QGIS 3.40 headless contra 
 
 ## [0.14.2] - 2026-09-02
 
-### Cambiado: `make tokens` apunta al modulo MEL
+### Cambiado: `make tokens` sigue la nueva ruta del manual de identidad
 
-El modulo Identidad de mariachi se renombro a MEL (Manual de Estilo y Lineamientos) y su prefijo de
-API paso de `/identidad` a `/mel`. `scripts/sync-tokens.sh` sigue esa ruta. El `theme.qss` que trae
-declara ahora su origen como MEL en el encabezado; el contenido no cambia.
+`scripts/sync-tokens.sh` sigue la ruta nueva de donde se publica el `theme.qss`; el contenido no
+cambia.
 
 ---
 
@@ -89,7 +147,7 @@ sigue haciendo falta.
 ### Cambiado: la simbologia sigue al visor y al catalogo de identidad
 
 Los cuatro glifos de geometria del arbol comparten el naranja `accent-deep`, que se lee del
-`theme.qss` que emite el modulo Identidad de mariachi en vez de estar escrito en el codigo, y el
+`theme.qss` que se genera desde el manual de identidad en vez de estar escrito en el codigo, y el
 de poligono paso de pentagono a triangulo: el hexagono queda reservado al modo hexbin del visor.
 
 `make tokens` trae ese `theme.qss` cuando la identidad cambia, en lugar de copiarlo a mano.

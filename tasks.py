@@ -16,7 +16,7 @@ PESO_CATALOGO: float = 40.0
 
 class _TareaMapaLab(QgsTask):
 
-    def __init__(self, descripcion: str, flags: Any = QgsTask.CanCancel) -> None:
+    def __init__(self, descripcion: str, flags: Any = QgsTask.Flag.CanCancel) -> None:
         super().__init__(descripcion, flags)
         self._feedback = QgsFeedback()
         self._error: str = ''
@@ -59,8 +59,15 @@ class CargarArbolTask(_TareaMapaLab):
         self.setProgress(PESO_CATALOGO)
         self._arbol = hydrate_tree(crudo)
         if not self._desde_cache:
+            self._cargar_municipios()
             self._precargar()
         return not self.isCanceled()
+
+    def _cargar_municipios(self) -> None:
+        try:
+            self._client.municipios = self._client.fetch_municipios(feedback=self._feedback)
+        except MapaLabError:
+            self._client.municipios = []
 
     def _pendientes(self) -> list[list[str]]:
         listas: list[list[str]] = [icono_urls(), refrescar_urls()]
@@ -102,13 +109,15 @@ class DescargarVectorTask(_TareaMapaLab):
     fallo = pyqtSignal(str)
 
     def __init__(self, client: MapaLabClient, node: dict[str, Any], target_dir: str,
-                 aplicar_filtro: bool = True) -> None:
+                 aplicar_filtro: bool = True, extra_cql: str = '', sufijo: str = '') -> None:
         etiqueta = clean_label(node.get('label') or 'capa')
         super().__init__(f'MapaLab: descargando «{etiqueta}»')
         self._client = client
         self._node = node
         self._target_dir = target_dir
         self._aplicar_filtro = aplicar_filtro
+        self._extra_cql = extra_cql
+        self._sufijo = sufijo
         self._etiqueta = etiqueta
         self._path: Optional[str] = None
         self._metadata: Any = None
@@ -129,8 +138,8 @@ class DescargarVectorTask(_TareaMapaLab):
     def run(self) -> bool:
         path, error = download_vector(
             self._node, self._client, self._target_dir,
-            apply_node_filter=self._aplicar_filtro,
-            feedback=self._feedback, on_progress=self._progreso)
+            apply_node_filter=self._aplicar_filtro, extra_cql=self._extra_cql,
+            sufijo=self._sufijo, feedback=self._feedback, on_progress=self._progreso)
 
         if self.isCanceled():
             return False
@@ -167,7 +176,7 @@ class MetadataTask(_TareaMapaLab):
     fallo = pyqtSignal(str)
 
     def __init__(self, client: MapaLabClient, node: dict[str, Any], layer_id: str) -> None:
-        super().__init__('MapaLab: metadata', QgsTask.CanCancel | QgsTask.Silent)
+        super().__init__('MapaLab: metadata', QgsTask.Flag.CanCancel | QgsTask.Flag.Silent)
         self._client = client
         self._node = node
         self._layer_id = layer_id
@@ -196,7 +205,7 @@ class ConsultaTask(_TareaMapaLab):
     fallo = pyqtSignal(str)
 
     def __init__(self, client: MapaLabClient, url: str) -> None:
-        super().__init__('MapaLab: consulta', QgsTask.CanCancel | QgsTask.Silent)
+        super().__init__('MapaLab: consulta', QgsTask.Flag.CanCancel | QgsTask.Flag.Silent)
         self._client = client
         self._url = url
         self._texto = ''
@@ -216,6 +225,40 @@ class ConsultaTask(_TareaMapaLab):
             self.listo.emit(self._texto)
         elif not self.isCanceled():
             self.fallo.emit(f'No se pudo consultar la capa: {self._error}')
+
+
+class PeriodicidadTask(_TareaMapaLab):
+
+    listo = pyqtSignal(dict, str)
+    fallo = pyqtSignal(str)
+
+    def __init__(self, client: MapaLabClient, node: dict[str, Any]) -> None:
+        super().__init__('MapaLab: fechas de la capa', QgsTask.Flag.CanCancel | QgsTask.Flag.Silent)
+        self._client = client
+        self._node = node
+        self._periodicidad: dict[str, Any] = {}
+        self._columna = ''
+
+    def run(self) -> bool:
+        wms_config = self._node.get('wmsConfig') or {}
+        workspace = wms_config.get('geoserverWorkspace') or wms_config.get('workspace') or ''
+        layer = wms_config.get('geoserverLayer') or ''
+        if not workspace or not layer:
+            return True
+        try:
+            self._periodicidad, columna = self._client.fetch_periodicity(
+                workspace, layer, feedback=self._feedback)
+        except MapaLabError as exc:
+            self._error = str(exc)
+            return False
+        self._columna = columna or ''
+        return True
+
+    def finished(self, result: bool) -> None:
+        if result:
+            self.listo.emit(self._periodicidad, self._columna)
+        elif not self.isCanceled():
+            self.fallo.emit(self._error)
 
 
 class Coordinador:

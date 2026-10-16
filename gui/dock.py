@@ -26,6 +26,8 @@ from ..theme import apply_theme, set_role
 from .actions import LayerActions
 from .arbol import ArbolCatalogo
 from .consulta import ControlConsulta, HerramientaConsulta
+from .filtros import ControlFiltros
+from .operaciones import Operaciones
 from ..tasks import CargarArbolTask, Coordinador
 from .icons import boton_de_recarga, icono_de_recarga, olvidar_iconos
 from .filas import fila_acciones, fila_limpieza, fila_servidor
@@ -53,6 +55,10 @@ class MapaLabDock(QDockWidget):
         self._tareas = Coordinador()
         self._actions = LayerActions(iface, self._client, self._tareas)
         self._tree: list[dict[str, Any]] = []
+        self._filtros = ControlFiltros(self._client, self._tareas,
+                                       lambda *args: self._ops.al_cambiar(*args))
+        self._ops = Operaciones(iface, self._client, self._tareas, self._actions, self._filtros,
+                                self._mensaje, lambda: self._tree, self)
         self._consulta = ControlConsulta(iface, self._crear_consulta)
         self._switch = SwitchModoBase()
         self._switch.setEnabled(False)
@@ -94,11 +100,12 @@ class MapaLabDock(QDockWidget):
             self._agregar)
         self._widget_tree.itemSelectionChanged.connect(self._actualizar_add)
         layout.addWidget(self._widget_tree)
+        layout.addWidget(self._filtros.widget)
 
         buttons, self._add_button, self._download_button = fila_acciones(
             self._on_add, self._on_download, TEXTO_CAPA)
         layout.addLayout(buttons)
-        layout.addLayout(fila_limpieza(self._on_clear_seleccion))
+        layout.addLayout(fila_limpieza(self._on_clear_seleccion, self.abrir_compartido))
 
         self._status = QLabel('')
         self._status.setWordWrap(True)
@@ -124,7 +131,8 @@ class MapaLabDock(QDockWidget):
 
     def _crear_consulta(self, canvas: Any) -> HerramientaConsulta:
         return HerramientaConsulta(canvas, self._client, self._tareas,
-                                   self._widget_tree.nodo_actual, self._al_consultar)
+                                   self._widget_tree.nodo_actual, self._al_consultar,
+                                   self._filtros.parametros_de)
 
     def _conectar_proyecto(self) -> None:
         proyecto = QgsProject.instance()
@@ -177,6 +185,7 @@ class MapaLabDock(QDockWidget):
             return
         self._tareas.cancelar('arbol')
         self._client.olvidar()
+        self._filtros.olvidar()
         olvidar_iconos()
         self._tree = []
         self._widget_tree.poblar([])
@@ -194,6 +203,7 @@ class MapaLabDock(QDockWidget):
     def _arbol_listo(self, arbol: list[dict[str, Any]], desde_cache: bool) -> None:
         self._tree = arbol
         olvidar_iconos()
+        self._filtros.cargar_municipios()
         self._montar_identidad()
         self._aplicar_busqueda()
         self._switch.setEnabled(True)
@@ -217,6 +227,7 @@ class MapaLabDock(QDockWidget):
     def _actualizar_add(self) -> None:
         node = self._widget_tree.nodo_actual()
         self._add_button.setText(TEXTO_GRUPO if es_grupo(node) else TEXTO_CAPA)
+        self._filtros.mostrar(node)
         if node is not None and node.get('wmsConfig') and self.isVisible():
             self._consulta.activar(forzar=True)
 
@@ -238,10 +249,10 @@ class MapaLabDock(QDockWidget):
 
     def _agregar(self, node: dict[str, Any], completa: bool = False,
                  descargar: bool = False) -> None:
-        if descargar:
-            self._descargar(node, completa)
-            return
-        self._reportar(self._actions.add_as_wms(node, completa))
+        self._ops.agregar(node, completa, descargar)
+
+    def abrir_compartido(self) -> None:
+        self._ops.abrir_compartido()
 
     def _on_clear_seleccion(self) -> None:
         quitadas = self._actions.clear_selections()
@@ -269,23 +280,7 @@ class MapaLabDock(QDockWidget):
     def _on_download(self) -> None:
         node = self._widget_tree.nodo_para_accion()
         if node is not None:
-            self._descargar(node, False)
-
-    def _descargar(self, node: dict[str, Any], completa: bool) -> None:
-        if self._tareas.ocupado('descarga'):
-            self._mensaje('Ya hay una descarga en curso.')
-            return
-
-        tarea, error = self._actions.download_as_vector(node, self, completa)
-        if tarea is None:
-            self._mensaje(error)
-            return
-
-        self._mensaje('Descargando… puedes seguir trabajando, aunque cierres el panel.')
-        self._tareas.lanzar('descarga', tarea, self._descarga_lista, self._mensaje)
-
-    def _descarga_lista(self, path: str) -> None:
-        self._mensaje(f'Guardado en {path}')
+            self._ops.descargar(node)
 
     def cerrar(self) -> None:
         self._consulta.desactivar()

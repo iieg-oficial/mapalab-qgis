@@ -20,7 +20,10 @@ def _widget_svg(datos: bytes, alto: int = LOGO_HEIGHT) -> Optional[QWidget]:
     try:
         from qgis.PyQt.QtSvg import QSvgWidget
     except ImportError:
-        return None
+        try:
+            from qgis.PyQt.QtSvgWidgets import QSvgWidget
+        except ImportError:
+            return None
 
     widget = QSvgWidget()
     widget.load(datos)
@@ -63,10 +66,10 @@ def montar_footer(footer: QWidget, layout: QHBoxLayout, client: MapaLabClient,
 
     footer.setVisible(iieg is not None or jalisco is not None)
     if iieg is not None:
-        layout.addWidget(iieg, 0, Qt.AlignVCenter)
+        layout.addWidget(iieg, 0, Qt.AlignmentFlag.AlignVCenter)
     layout.addStretch(1)
     if jalisco is not None:
-        layout.addWidget(jalisco, 0, Qt.AlignVCenter)
+        layout.addWidget(jalisco, 0, Qt.AlignmentFlag.AlignVCenter)
 
 
 class Footer(QWidget):
@@ -119,7 +122,7 @@ class TitleBar(QWidget):
         self._layout.addStretch(1)
 
         if self._switch is not None:
-            self._layout.addWidget(self._switch, 0, Qt.AlignVCenter)
+            self._layout.addWidget(self._switch, 0, Qt.AlignmentFlag.AlignVCenter)
 
     def refrescar(self) -> None:
         if self._marca is None or not isinstance(self._marca, QLabel):

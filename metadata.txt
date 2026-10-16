@@ -1,25 +1,41 @@
 [general]
 name=MapaLab
 qgisMinimumVersion=3.40
-description=Catálogo de capas geoespaciales del IIEG dentro de QGIS
-version=0.15.0
+qgisMaximumVersion=4.99
+description=Browse and add the geospatial layer catalog of the IIEG Jalisco (MapaLab) in QGIS
+version=0.17.0
 author=Instituto de Información Estadística y Geográfica de Jalisco
 email=contacto@iieg.gob.mx
 
-about=Agrega al lienzo de QGIS las capas publicadas en el visor MapaLab del IIEG, con su
-    árbol de temas, su buscador y su metadata institucional. Las capas se agregan como WMS
-    para visualizar y se pueden descargar como GeoPackage para analizar. Solo lectura.
+about=Brings the MapaLab layer catalog of the Institute of Statistical and Geographic Information
+    of Jalisco (IIEG, Mexico) into QGIS: the same theme tree, an accent-insensitive search and the
+    institutional metadata. Layers are added as tiled WMS for viewing and can be downloaded as
+    GeoPackage for analysis, filtered by municipality and date. Click a feature to copy it with its
+    attributes, switch between IIEG and INEGI boundaries, and open maps shared from the web viewer.
+    Read only.
+
+    Requires network access to the MapaLab server of the IIEG, already set to
+    https://iieg.jalisco.gob.mx. No external Python dependencies.
+
+    Lleva a QGIS el catálogo de capas de MapaLab del IIEG Jalisco: el árbol de temas, el buscador y
+    la metadata institucional. Las capas entran como WMS y se descargan como GeoPackage, filtradas
+    por municipio y fecha.
 
 tracker=https://github.com/iieg-oficial/mapalab-qgis/issues
 repository=https://github.com/iieg-oficial/mapalab-qgis
-homepage=https://github.com/iieg-oficial/mapalab-qgis
+homepage=https://github.com/iieg-oficial/mapalab-qgis#readme
 
 tags=web,wms,wfs,catalog,catalogo,geopackage,mexico,jalisco,iieg,mapalab,inegi,opendata
 
 category=Web
 icon=icon.svg
-changelog=Ver docs/CHANGELOG.md en el repositorio.
-experimental=False
+changelog=
+    0.17.0 QGIS 4 support (Qt 6). English description and documentation. Security scan clean.
+    0.16.0 Filter by municipality and date, applied live to loaded layers, to click queries and to
+    downloads. Open maps shared from the web viewer with their layers, filters, view and notes.
+    0.15.0 Full metadata, downloads never overwrite a GeoPackage, click queries read attributes,
+    no network on the UI thread, change server from the Web menu.
+experimental=True
 deprecated=False
 hasProcessingProvider=no
 server=False
