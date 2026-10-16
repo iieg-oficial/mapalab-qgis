@@ -20,10 +20,6 @@ def capa_por_nodo(node_id: str) -> Optional[QgsMapLayer]:
     return None
 
 
-def nodo_cargado(node_id: str) -> bool:
-    return capa_por_nodo(node_id) is not None
-
-
 def quitar_nodo(node_id: str) -> int:
     project = QgsProject.instance()
     quitadas = 0
@@ -32,6 +28,18 @@ def quitar_nodo(node_id: str) -> int:
             project.removeMapLayer(capa.id())
             quitadas += 1
     return quitadas
+
+
+def es_del_catalogo(capa: QgsMapLayer) -> bool:
+    return bool(capa.customProperty(NODE_ID_PROPERTY) or capa.customProperty(GRUPO_PROPERTY))
+
+
+def clave_de_capa(capa: QgsMapLayer) -> str:
+    node_id = str(capa.customProperty(NODE_ID_PROPERTY) or '')
+    if node_id:
+        return node_id
+    grupo = str(capa.customProperty(GRUPO_PROPERTY) or '')
+    return f'{grupo}:{capa.name()}' if grupo else ''
 
 
 def es_del_plugin(capa: QgsMapLayer) -> bool:
@@ -52,5 +60,3 @@ def limpiar_selecciones() -> int:
     for capa in capas:
         project.removeMapLayer(capa.id())
     return len(capas)
-
-

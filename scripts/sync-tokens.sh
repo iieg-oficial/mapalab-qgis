@@ -14,8 +14,8 @@ fi
 
 if [ -z "$MARIACHI_URL" ] || [ -z "$MARIACHI_TOKEN" ]; then
     echo "Faltan MARIACHI_URL y MARIACHI_TOKEN, o la ruta a un tokens.qss ya descargado." >&2
-    echo "  make plugin-tokens ARCHIVO=~/Descargas/tokens.qss" >&2
-    echo "  MARIACHI_URL=https://<gateway> MARIACHI_TOKEN=<jwt> make plugin-tokens" >&2
+    echo "  make tokens ARCHIVO=~/Descargas/tokens.qss" >&2
+    echo "  MARIACHI_URL=https://<gateway> MARIACHI_TOKEN=<jwt> make tokens" >&2
     exit 1
 fi
 

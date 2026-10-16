@@ -5,28 +5,23 @@ from qgis.PyQt.QtCore import QCoreApplication, Qt
 from qgis.PyQt.QtGui import QCursor
 from qgis.PyQt.QtWidgets import QApplication, QFileDialog, QWidget
 
-from ..api.client import MapaLabClient, MapaLabError
+from ..api.client import MapaLabClient
 from ..layers.grupos import add_group_layers, es_grupo
 from ..layers.limites import aplicar_modo, modo_actual
 from ..layers.proyecto import limpiar_selecciones, quitar_nodo
-from ..layers.metadata import apply_metadata
 from ..layers.seleccion import agregar
-from ..layers.wms import add_wms_layer
-from ..model.tree import (
-    clean_label,
-    has_wfs,
-    is_downloadable,
-    workspace_and_layer,
-)
-from ..tasks import DescargarVectorTask
+from ..layers.wms import add_wms_layer, capa_existente
+from ..model.tree import clean_label, has_wfs, is_downloadable
+from ..tasks import Coordinador, DescargarVectorTask, MetadataTask
 from .ficha import abrir_ficha
 
 
 class LayerActions:
 
-    def __init__(self, iface: Any, client: MapaLabClient) -> None:
+    def __init__(self, iface: Any, client: MapaLabClient, tareas: Coordinador) -> None:
         self._iface = iface
         self._client = client
+        self._tareas = tareas
         self._ficha: Any = None
         self._ficha_feature: Any = None
 
@@ -38,14 +33,8 @@ class LayerActions:
         QCoreApplication.processEvents()
 
     def _attach_metadata(self, layer: Any, node: dict[str, Any]) -> None:
-        workspace, layer_name = workspace_and_layer(node)
-        if not workspace or not layer_name:
-            return
-        try:
-            payload = self._client.fetch_metadata(workspace, layer_name)
-        except MapaLabError:
-            return
-        apply_metadata(layer, payload, node)
+        tarea = MetadataTask(self._client, node, layer.id())
+        self._tareas.lanzar(f'metadata:{layer.id()}', tarea, lambda _: None, lambda _: None)
 
     def clear_selections(self) -> int:
         return self._quitar(limpiar_selecciones())
@@ -62,23 +51,29 @@ class LayerActions:
         label = clean_label(node.get('label') or '')
         self._busy(True)
         try:
-            agregadas, razon = add_group_layers(node, modo_actual(), completa)
+            agregadas, razon, aviso = add_group_layers(node, modo_actual(), completa)
         finally:
             self._busy(False)
 
         if agregadas == 0:
             return False, f'No se pudo agregar «{label}»: {razon}'
-        return True, ''
+        return True, aviso
 
     def add_as_wms(self, node: dict[str, Any], completa: bool = False) -> tuple[bool, str]:
         if es_grupo(node):
             return self.add_group(node, completa)
 
         label = clean_label(node.get('label') or '')
+        modo = modo_actual()
+        existente = capa_existente(node, apply_node_filter=not completa, modo=modo)
+        if existente is not None:
+            if self._iface is not None:
+                self._iface.setActiveLayer(existente)
+            return True, f'«{label}» ya está en el mapa.'
+
         self._busy(True)
         try:
-            layer, reason = add_wms_layer(node, apply_node_filter=not completa,
-                                          modo=modo_actual())
+            layer, reason = add_wms_layer(node, apply_node_filter=not completa, modo=modo)
             if layer is None:
                 return False, f'No se pudo agregar «{label}»: {reason}'
             self._attach_metadata(layer, node)

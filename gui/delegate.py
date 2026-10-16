@@ -1,10 +1,9 @@
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from qgis.PyQt.QtCore import QModelIndex, QPointF, QRect, QRectF, QSize, Qt
 from qgis.PyQt.QtGui import QColor, QFont, QPainter, QPalette, QPen
 from qgis.PyQt.QtWidgets import QStyle, QStyledItemDelegate, QStyleOptionViewItem
 
-from ..layers.proyecto import nodo_cargado
 from ..model.tree import es_categoria, es_etiqueta
 from ..theme import color_de_rol
 from .glifos import TIPOS, pintar_geometria
@@ -58,6 +57,7 @@ ACCENT_BAR_RATIO: float = 0.5
 ROOT_HEIGHT: int = 52
 ITEM_HEIGHT: int = 30
 
+
 def badge_of(node: Optional[dict[str, Any]]) -> Optional[tuple[str, QColor]]:
     if not isinstance(node, dict):
         return None
@@ -82,9 +82,11 @@ def geometry_of(node: Optional[dict[str, Any]]) -> Optional[str]:
 
 class LayerItemDelegate(QStyledItemDelegate):
 
-    def __init__(self, node_role: int, parent: Optional[Any] = None) -> None:
+    def __init__(self, node_role: int, esta_cargado: Callable[[str], bool],
+                 parent: Optional[Any] = None) -> None:
         super().__init__(parent)
         self._node_role = node_role
+        self._esta_cargado = esta_cargado
 
     def _es_raiz(self, index: QModelIndex) -> bool:
         return not index.parent().isValid()
@@ -129,7 +131,7 @@ class LayerItemDelegate(QStyledItemDelegate):
     def hay_cerrar(self, node: Any) -> bool:
         if not isinstance(node, dict) or not node.get('wmsConfig'):
             return False
-        return nodo_cargado(str(node.get('id') or ''))
+        return self._esta_cargado(str(node.get('id') or ''))
 
     def _pintar_cerrar(self, painter: QPainter, rect: QRect) -> None:
         pluma = QPen(QColor(color_de_rol('quiet', 'color', '#465055')), CERRAR_TRAZO)

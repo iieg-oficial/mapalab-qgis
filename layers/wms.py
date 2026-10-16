@@ -1,7 +1,7 @@
 from typing import Any, Optional
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from qgis.core import QgsDataSourceUri, QgsProject, QgsRasterLayer
+from qgis.core import QgsDataSourceUri, QgsMapLayer, QgsProject, QgsRasterLayer
 
 from ..config import (DATA_CRS, FEATURE_COUNT, IDENTIFY_FORMAT, NODE_ID_PROPERTY,
                       TILE_SIZE, env_de_modo)
@@ -90,6 +90,18 @@ def crear_wms_layer(node: dict[str, Any], cql_filter: str = '',
     layer.setCustomProperty(NODE_ID_PROPERTY, str(node.get('id') or ''))
     layer.setCustomProperty('identify/format', IDENTIFY_FORMAT)
     return layer, ''
+
+
+def capa_existente(node: dict[str, Any], apply_node_filter: bool = False,
+                   time_value: Optional[str] = None,
+                   modo: Optional[str] = None) -> Optional[QgsMapLayer]:
+    wms_config = node.get('wmsConfig') or {}
+    cql_filter = (wms_config.get('cqlFilter') or '') if apply_node_filter else ''
+    uri = build_wms_uri(wms_config, cql_filter, time_value, modo)
+    for capa in QgsProject.instance().mapLayers().values():
+        if capa.providerType() == 'wms' and capa.source() == uri:
+            return capa
+    return None
 
 
 def add_wms_layer(node: dict[str, Any], apply_node_filter: bool = False,

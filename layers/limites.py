@@ -4,6 +4,7 @@ from qgis.core import QgsDataSourceUri, QgsMapLayer, QgsProject
 
 from ..config import CAPAS_BASE, MODO_IIEG, MODO_INEGI, NODE_ID_PROPERTY
 from ..model.tree import find_node
+from .proyecto import es_del_catalogo
 from .wms import add_wms_layer, con_env
 
 
@@ -45,14 +46,14 @@ def _quitar(modo: str) -> None:
         project.removeMapLayer(capa.id())
 
 
-def capas_del_plugin() -> list[QgsMapLayer]:
+def capas_wms_del_catalogo() -> list[QgsMapLayer]:
     return [capa for capa in QgsProject.instance().mapLayers().values()
-            if capa.providerType() == 'wms' and capa.customProperty(NODE_ID_PROPERTY)]
+            if capa.providerType() == 'wms' and es_del_catalogo(capa)]
 
 
 def actualizar_env(modo: str) -> int:
     cambiadas = 0
-    for capa in capas_del_plugin():
+    for capa in capas_wms_del_catalogo():
         uri = con_env(capa.source(), modo)
         if uri == capa.source():
             continue
@@ -67,11 +68,10 @@ def aplicar_modo(arbol: list[dict[str, Any]], modo: str) -> tuple[bool, str]:
     if not ids:
         return False, f'No existe el modo «{modo}».'
 
-    _quitar(modo_contrario(modo))
-
     presentes = {_node_id(capa) for capa in capas_del_modo(modo)}
     faltantes = [node_id for node_id in ids if node_id not in presentes]
     sin_catalogo: list[str] = []
+    agregadas: list[str] = []
 
     for node_id in reversed(faltantes):
         node = find_node(arbol, node_id)
@@ -80,8 +80,12 @@ def aplicar_modo(arbol: list[dict[str, Any]], modo: str) -> tuple[bool, str]:
             continue
         capa, razon = add_wms_layer(node, al_tope=True, modo=modo)
         if capa is None:
+            for capa_id in agregadas:
+                QgsProject.instance().removeMapLayer(capa_id)
             return False, f'No se pudo agregar «{node_id}»: {razon}'
+        agregadas.append(capa.id())
 
+    _quitar(modo_contrario(modo))
     actualizar_env(modo)
 
     if sin_catalogo:

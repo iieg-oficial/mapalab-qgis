@@ -1,3 +1,5 @@
+import os
+import re
 from typing import Optional
 
 from qgis.PyQt.QtCore import QSettings
@@ -7,8 +9,21 @@ SETTINGS_BASE_URL: str = f'{SETTINGS_GROUP}/base_url'
 
 DEFAULT_BASE_URL: str = ''
 
+
+def _version() -> str:
+    path = os.path.join(os.path.dirname(__file__), 'metadata.txt')
+    try:
+        with open(path, 'r', encoding='utf-8') as handle:
+            encontrada = re.search(r'^version=(\S+)', handle.read(), re.MULTILINE)
+    except OSError:
+        return '0'
+    return encontrada.group(1) if encontrada else '0'
+
+
+VERSION: str = _version()
+
 CLIENT_HEADER: bytes = b'X-Mapalab-Client'
-CLIENT_VALUE: bytes = b'qgis-plugin/0.1.0'
+CLIENT_VALUE: bytes = f'qgis-plugin/{VERSION}'.encode('ascii', errors='replace')
 
 DATA_CRS: str = 'EPSG:6368'
 DOWNLOAD_CRS: str = 'EPSG:6368'
@@ -41,6 +56,7 @@ ENV_GEOM: dict[str, str] = {
 def env_de_modo(modo: Optional[str]) -> str:
     return ENV_GEOM.get(modo or '', ENV_GEOM[MODO_IIEG])
 
+
 LOGOS_PATH: str = '/acervo/iieg/logos'
 
 LOGOS: dict[str, tuple[str, str]] = {
@@ -70,7 +86,11 @@ FONT_SCALE_PX: int = 2
 SECTION_GAP: int = 14
 
 REQUEST_TIMEOUT_MS: int = 30000
+ASSET_TIMEOUT_MS: int = 8000
 DOWNLOAD_TIMEOUT_MS: int = 600000
+
+ASSET_TTL_S: int = 7 * 24 * 3600
+ASSET_MISS_TTL_S: int = 24 * 3600
 
 
 def get_base_url() -> str:
@@ -103,3 +123,8 @@ def logo_url(marca: str, oscuro: bool) -> str:
     claro, oscuro_file = LOGOS.get(marca, ('', ''))
     archivo = oscuro_file if oscuro and oscuro_file else claro
     return f'{get_base_url()}{LOGOS_PATH}/{archivo}' if archivo else ''
+
+
+def es_del_servidor(url: str) -> bool:
+    base = get_base_url()
+    return bool(base) and (url == base or url.startswith(f'{base}/'))
