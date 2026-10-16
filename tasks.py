@@ -1,11 +1,12 @@
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Iterator, Optional
 
 from qgis.PyQt.QtCore import pyqtSignal
-from qgis.core import QgsApplication, QgsFeedback, QgsTask
+from qgis.core import QgsApplication, QgsFeedback, QgsProject, QgsTask
 
 from .api.client import MapaLabCancelado, MapaLabClient, MapaLabError
 from .assets_cache import fetch_asset
-from .identidad import tema_icono_urls
+from .config import LOGOS
+from .identidad import guardar_icono, icono_urls, logo_urls, refrescar_urls, tema_icono_urls
 from .layers.metadata import apply_metadata
 from .layers.vector import add_vector_layer, download_vector
 from .model.tree import alias_de_tema, clean_label, hydrate_tree, workspace_and_layer
@@ -15,8 +16,8 @@ PESO_CATALOGO: float = 40.0
 
 class _TareaMapaLab(QgsTask):
 
-    def __init__(self, descripcion: str) -> None:
-        super().__init__(descripcion, QgsTask.CanCancel)
+    def __init__(self, descripcion: str, flags: Any = QgsTask.CanCancel) -> None:
+        super().__init__(descripcion, flags)
         self._feedback = QgsFeedback()
         self._error: str = ''
 
@@ -25,9 +26,17 @@ class _TareaMapaLab(QgsTask):
         super().cancel()
 
 
+def _urls_de_nodos(nodos: list[dict[str, Any]]) -> Iterator[list[str]]:
+    for nodo in nodos:
+        url = nodo.get('iconUrl')
+        if isinstance(url, str) and url:
+            yield [url]
+        yield from _urls_de_nodos(nodo.get('children') or [])
+
+
 class CargarArbolTask(_TareaMapaLab):
 
-    listo = pyqtSignal(list)
+    listo = pyqtSignal(list, bool)
     fallo = pyqtSignal(str)
 
     def __init__(self, client: MapaLabClient, force: bool = False) -> None:
@@ -35,6 +44,7 @@ class CargarArbolTask(_TareaMapaLab):
         self._client = client
         self._force = force
         self._arbol: list[dict[str, Any]] = []
+        self._desde_cache = False
 
     def run(self) -> bool:
         try:
@@ -45,31 +55,43 @@ class CargarArbolTask(_TareaMapaLab):
             self._error = str(exc)
             return False
 
+        self._desde_cache = self._client.desde_cache
         self.setProgress(PESO_CATALOGO)
         self._arbol = hydrate_tree(crudo)
-        self._precargar_iconos()
+        if not self._desde_cache:
+            self._precargar()
         return not self.isCanceled()
 
-    def _precargar_iconos(self) -> None:
-        total = len(self._arbol) or 1
-        for indice, nodo in enumerate(self._arbol):
-            if self.isCanceled():
-                return
+    def _pendientes(self) -> list[list[str]]:
+        listas: list[list[str]] = [icono_urls(), refrescar_urls()]
+        for marca in LOGOS:
+            listas.extend([logo_urls(marca, False), logo_urls(marca, True)])
+        for nodo in self._arbol:
             alias = alias_de_tema(nodo)
             if alias:
-                try:
-                    fetch_asset(self._client, tema_icono_urls(alias), self._feedback)
-                    fetch_asset(self._client, tema_icono_urls(alias, True), self._feedback)
-                except MapaLabCancelado:
-                    return
-            avance = (100.0 - PESO_CATALOGO) * (indice + 1) / total
-            self.setProgress(PESO_CATALOGO + avance)
+                listas.extend([tema_icono_urls(alias), tema_icono_urls(alias, True)])
+        listas.extend(_urls_de_nodos(self._arbol))
+        return listas
+
+    def _precargar(self) -> None:
+        pendientes = self._pendientes()
+        total = len(pendientes) or 1
+        for indice, urls in enumerate(pendientes):
+            if self.isCanceled():
+                return
+            try:
+                datos = fetch_asset(self._client, urls, self._feedback)
+            except MapaLabCancelado:
+                return
+            if indice == 0 and datos:
+                guardar_icono(datos)
+            self.setProgress(PESO_CATALOGO + (100.0 - PESO_CATALOGO) * (indice + 1) / total)
 
     def finished(self, result: bool) -> None:
         if self.isCanceled():
             return
         if result:
-            self.listo.emit(self._arbol)
+            self.listo.emit(self._arbol, self._desde_cache)
         else:
             self.fallo.emit(self._error or 'El servidor no respondió.')
 
@@ -119,13 +141,14 @@ class DescargarVectorTask(_TareaMapaLab):
         self._path = path
         self._metadata = self._metadata_remota()
         self.setProgress(100.0)
-        return not self.isCanceled()
+        return True
 
     def finished(self, result: bool) -> None:
-        if self.isCanceled():
-            return
         if not result or self._path is None:
-            self.fallo.emit(self._error or f'No se pudo descargar «{self._etiqueta}».')
+            if self.isCanceled():
+                self.fallo.emit(f'Se canceló la descarga de «{self._etiqueta}».')
+            else:
+                self.fallo.emit(self._error or f'No se pudo descargar «{self._etiqueta}».')
             return
 
         capa = add_vector_layer(self._path, self._node)
@@ -138,6 +161,63 @@ class DescargarVectorTask(_TareaMapaLab):
         self.listo.emit(self._path)
 
 
+class MetadataTask(_TareaMapaLab):
+
+    listo = pyqtSignal(str)
+    fallo = pyqtSignal(str)
+
+    def __init__(self, client: MapaLabClient, node: dict[str, Any], layer_id: str) -> None:
+        super().__init__('MapaLab: metadata', QgsTask.CanCancel | QgsTask.Silent)
+        self._client = client
+        self._node = node
+        self._layer_id = layer_id
+        self._payload: Any = None
+
+    def run(self) -> bool:
+        workspace, layer = workspace_and_layer(self._node)
+        if not workspace or not layer:
+            return False
+        try:
+            self._payload = self._client.fetch_metadata(workspace, layer, feedback=self._feedback)
+        except MapaLabError:
+            return False
+        return True
+
+    def finished(self, result: bool) -> None:
+        capa = QgsProject.instance().mapLayer(self._layer_id)
+        if result and capa is not None:
+            apply_metadata(capa, self._payload, self._node)
+        self.listo.emit(self._layer_id)
+
+
+class ConsultaTask(_TareaMapaLab):
+
+    listo = pyqtSignal(str)
+    fallo = pyqtSignal(str)
+
+    def __init__(self, client: MapaLabClient, url: str) -> None:
+        super().__init__('MapaLab: consulta', QgsTask.CanCancel | QgsTask.Silent)
+        self._client = client
+        self._url = url
+        self._texto = ''
+
+    def run(self) -> bool:
+        try:
+            self._texto = self._client.fetch_text(self._url, feedback=self._feedback)
+        except MapaLabCancelado:
+            return False
+        except MapaLabError as exc:
+            self._error = str(exc)
+            return False
+        return True
+
+    def finished(self, result: bool) -> None:
+        if result:
+            self.listo.emit(self._texto)
+        elif not self.isCanceled():
+            self.fallo.emit(f'No se pudo consultar la capa: {self._error}')
+
+
 class Coordinador:
 
     def __init__(self) -> None:
@@ -147,22 +227,28 @@ class Coordinador:
         return clave in self._activas
 
     def lanzar(self, clave: str, tarea: _TareaMapaLab,
-               al_terminar: Callable[[Any], None],
+               al_terminar: Callable[..., None],
                al_fallar: Callable[[str], None]) -> None:
         tarea.listo.connect(al_terminar)
         tarea.fallo.connect(al_fallar)
-        tarea.taskCompleted.connect(lambda: self._liberar(clave))
-        tarea.taskTerminated.connect(lambda: self._liberar(clave))
+        tarea.taskCompleted.connect(lambda: self._liberar(clave, tarea))
+        tarea.taskTerminated.connect(lambda: self._liberar(clave, tarea))
         self._activas[clave] = tarea
         QgsApplication.taskManager().addTask(tarea)
 
-    def _liberar(self, clave: str) -> None:
-        self._activas.pop(clave, None)
+    def _liberar(self, clave: str, tarea: _TareaMapaLab) -> None:
+        if self._activas.get(clave) is tarea:
+            self._activas.pop(clave, None)
+
+    def cancelar(self, clave: str) -> None:
+        tarea = self._activas.pop(clave, None)
+        if tarea is None:
+            return
+        try:
+            tarea.cancel()
+        except RuntimeError:
+            pass
 
     def cancelar_todo(self) -> None:
-        for tarea in list(self._activas.values()):
-            try:
-                tarea.cancel()
-            except RuntimeError:
-                pass
-        self._activas.clear()
+        for clave in list(self._activas):
+            self.cancelar(clave)

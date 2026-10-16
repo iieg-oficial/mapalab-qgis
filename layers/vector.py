@@ -5,16 +5,36 @@ from urllib.parse import urlencode
 
 from qgis.core import QgsFeedback, QgsProject, QgsVectorLayer
 
+from ..almacen import escribir_atomico
 from ..api.client import MapaLabClient, MapaLabError
 from ..config import DOWNLOAD_CRS, DOWNLOAD_TIMEOUT_MS
 from ..model.tree import clean_label, typename
 
 GPKG_FORMAT: str = 'geopackage'
 
+FIRMA_SQLITE: bytes = b'SQLite format 3'
+
+MAX_VARIANTES: int = 999
+
 
 def _safe_name(value: str) -> str:
     cleaned = re.sub(r'[^A-Za-z0-9_.-]+', '_', value)
     return cleaned.strip('_') or 'capa'
+
+
+def _excepcion(contenido: bytes) -> str:
+    texto = contenido[:4000].decode('utf-8', errors='replace')
+    encontrada = re.search(r'<(?:ows:)?ExceptionText>(.*?)</', texto, re.DOTALL)
+    return encontrada.group(1).strip()[:300] if encontrada else ''
+
+
+def ruta_libre(target_dir: str, nombre: str) -> str:
+    destino = os.path.join(target_dir, f'{nombre}.gpkg')
+    for numero in range(2, MAX_VARIANTES + 1):
+        if not os.path.exists(destino):
+            return destino
+        destino = os.path.join(target_dir, f'{nombre}_{numero}.gpkg')
+    return destino
 
 
 def build_wfs_url(wms_config: dict[str, Any], type_name: str, cql_filter: str = '') -> str:
@@ -59,21 +79,21 @@ def download_vector(node: dict[str, Any], client: MapaLabClient, target_dir: str
     nombre = _safe_name(type_name)
     if apply_node_filter and wms_config.get('cqlFilter'):
         nombre = f"{nombre}_{_safe_name(str(node.get('id') or ''))}"
-    destination = os.path.join(target_dir, f'{nombre}.gpkg')
 
     try:
-        written = client.download(
-            url, destination, DOWNLOAD_TIMEOUT_MS, feedback=feedback, on_progress=on_progress)
+        contenido = client.descargar(
+            url, DOWNLOAD_TIMEOUT_MS, feedback=feedback, on_progress=on_progress)
     except MapaLabError as exc:
         return None, str(exc)
 
-    if written == 0:
+    if not contenido:
         return None, 'El servidor devolvió una respuesta vacía.'
+    if not contenido.startswith(FIRMA_SQLITE):
+        return None, f'El servidor no devolvió un GeoPackage. {_excepcion(contenido)}'.strip()
 
-    with open(destination, 'rb') as handle:
-        if handle.read(15) != b'SQLite format 3':
-            os.remove(destination)
-            return None, 'El servidor no devolvió un GeoPackage.'
+    destination = ruta_libre(target_dir, nombre)
+    if os.path.exists(destination) or not escribir_atomico(destination, contenido):
+        return None, f'No se pudo escribir en {target_dir}.'
 
     return destination, ''
 

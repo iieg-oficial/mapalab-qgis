@@ -6,7 +6,7 @@ from qgis.PyQt.QtWidgets import QHBoxLayout, QLabel, QWidget
 from ..api.client import MapaLabClient
 from ..assets_cache import fetch_asset
 from ..config import LOGO_HEIGHT
-from ..identidad import guardar_icono, icono_urls, logo_urls
+from ..identidad import logo_urls
 from ..theme import set_role
 
 TITULO: str = 'MapaLab'
@@ -37,7 +37,7 @@ FOOTER_HEIGHT: int = 26
 
 def logo_widget(client: MapaLabClient, marca: str, oscuro: bool,
                 alto: int = FOOTER_HEIGHT) -> Optional[QWidget]:
-    datos = fetch_asset(client, logo_urls(marca, oscuro))
+    datos = fetch_asset(client, logo_urls(marca, oscuro), solo_cache=True)
     if not datos:
         return None
     widget = _widget_svg(datos, alto)
@@ -46,16 +46,22 @@ def logo_widget(client: MapaLabClient, marca: str, oscuro: bool,
     return widget
 
 
+def _vaciar(layout: QHBoxLayout) -> None:
+    while layout.count():
+        item = layout.takeAt(0)
+        widget = item.widget()
+        if widget is not None:
+            widget.deleteLater()
+
+
 def montar_footer(footer: QWidget, layout: QHBoxLayout, client: MapaLabClient,
                   alto: int) -> None:
+    _vaciar(layout)
     oscuro = es_tema_oscuro(footer)
     iieg = logo_widget(client, 'iieg', oscuro, alto)
     jalisco = logo_widget(client, 'jalisco', oscuro, alto)
 
-    if iieg is None and jalisco is None:
-        footer.hide()
-        return
-
+    footer.setVisible(iieg is not None or jalisco is not None)
     if iieg is not None:
         layout.addWidget(iieg, 0, Qt.AlignVCenter)
     layout.addStretch(1)
@@ -63,7 +69,23 @@ def montar_footer(footer: QWidget, layout: QHBoxLayout, client: MapaLabClient,
         layout.addWidget(jalisco, 0, Qt.AlignVCenter)
 
 
-def montar_titulo(dock: Any, client: MapaLabClient, switch: QWidget) -> None:
+class Footer(QWidget):
+
+    def __init__(self, client: MapaLabClient, alto_barra: int, alto_logo: int,
+                 parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self._client = client
+        self._alto_logo = alto_logo
+        self.setFixedHeight(alto_barra)
+        self._layout = QHBoxLayout()
+        self._layout.setContentsMargins(10, 6, 10, 6)
+        self.setLayout(self._layout)
+
+    def refrescar(self) -> None:
+        montar_footer(self, self._layout, self._client, self._alto_logo)
+
+
+def montar_titulo(dock: Any, client: MapaLabClient, switch: QWidget) -> 'TitleBar':
     from ..theme import apply_theme
 
     barra = TitleBar(client, switch, dock)
@@ -72,6 +94,7 @@ def montar_titulo(dock: Any, client: MapaLabClient, switch: QWidget) -> None:
     apply_theme(barra)
     barra.cargar()
     dock.setTitleBarWidget(barra)
+    return barra
 
 
 class TitleBar(QWidget):
@@ -88,17 +111,25 @@ class TitleBar(QWidget):
         layout.setSpacing(10)
         self.setLayout(layout)
         self._layout = layout
+        self._marca: Optional[QWidget] = None
 
     def cargar(self) -> None:
-        oscuro = es_tema_oscuro(self)
-
-        self._layout.addWidget(self._logo_o_texto('mapalab', oscuro, TITULO))
+        self._marca = self._logo_o_texto('mapalab', es_tema_oscuro(self), TITULO)
+        self._layout.addWidget(self._marca)
         self._layout.addStretch(1)
 
         if self._switch is not None:
             self._layout.addWidget(self._switch, 0, Qt.AlignVCenter)
 
-        self._asegurar_icono()
+    def refrescar(self) -> None:
+        if self._marca is None or not isinstance(self._marca, QLabel):
+            return
+        logo = self._logo('mapalab', es_tema_oscuro(self))
+        if logo is None:
+            return
+        self._layout.replaceWidget(self._marca, logo)
+        self._marca.deleteLater()
+        self._marca = logo
 
     def _logo(self, marca: str, oscuro: bool) -> Optional[QWidget]:
         return logo_widget(self._client, marca, oscuro, LOGO_HEIGHT)
@@ -110,12 +141,3 @@ class TitleBar(QWidget):
         etiqueta = QLabel(texto)
         set_role(etiqueta, 'title')
         return etiqueta
-
-    def _asegurar_icono(self) -> None:
-        from ..identidad import icono_guardado
-
-        if icono_guardado():
-            return
-        datos = fetch_asset(self._client, icono_urls())
-        if datos:
-            guardar_icono(datos)

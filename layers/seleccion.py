@@ -8,6 +8,7 @@ from qgis.core import (
     QgsField,
     QgsFields,
     QgsFillSymbol,
+    QgsGeometry,
     QgsLineSymbol,
     QgsMarkerSymbol,
     QgsProject,
@@ -106,7 +107,7 @@ def _existente(node_id: str) -> Optional[QgsVectorLayer]:
 
 
 def _crear(node_id: str, nombre: str, feature: QgsFeature) -> Optional[QgsVectorLayer]:
-    tipo = QgsWkbTypes.displayString(feature.geometry().wkbType())
+    tipo = QgsWkbTypes.displayString(QgsWkbTypes.multiType(feature.geometry().wkbType()))
     capa = QgsVectorLayer(f'{tipo}?crs={DATA_CRS}', f'{PREFIJO}{nombre}', 'memory')
     if not capa.isValid():
         return None
@@ -166,8 +167,11 @@ def agregar(node_id: str, nombre: str, crs: QgsCoordinateReferenceSystem,
     if repetido is not None:
         return capa, repetido, ''
 
+    geometria = QgsGeometry(listo.geometry())
+    if QgsWkbTypes.isMultiType(capa.wkbType()):
+        geometria.convertToMultiType()
     copia = QgsFeature(capa.fields())
-    copia.setGeometry(listo.geometry())
+    copia.setGeometry(geometria)
     _copiar_atributos(copia, listo, capa.fields())
     copia[CAMPO_ORIGEN] = marca
 

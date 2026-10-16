@@ -1,5 +1,6 @@
 import os
 import re
+from functools import lru_cache
 from typing import Optional
 
 from qgis.PyQt.QtCore import QEvent, QObject, Qt
@@ -23,6 +24,7 @@ def _theme_path() -> str:
     return os.path.join(os.path.dirname(__file__), THEME_FILE)
 
 
+@lru_cache(maxsize=1)
 def load_stylesheet() -> str:
     path = _theme_path()
     if not os.path.exists(path):
@@ -102,10 +104,12 @@ def _color(bloque: str, propiedad: str, respaldo: str) -> str:
     return valor.group(1).strip() if valor else respaldo
 
 
+@lru_cache(maxsize=None)
 def color_de_selector(selector: str, propiedad: str, respaldo: str) -> str:
     return _color(_bloque_de_selector(selector), propiedad, respaldo)
 
 
+@lru_cache(maxsize=None)
 def color_de_rol(rol: str, propiedad: str, respaldo: str) -> str:
     return _color(_bloque_de_rol(rol), propiedad, respaldo)
 

@@ -2,8 +2,7 @@ import json
 import os
 from typing import Any, Optional
 
-from qgis.core import QgsApplication
-
+from .almacen import carpeta, escribir_atomico
 from .config import (
     ICONO_ARCHIVO,
     ICONO_CACHE,
@@ -73,9 +72,7 @@ def refrescar_urls() -> list[str]:
 
 
 def icono_cache_path() -> str:
-    carpeta = os.path.join(QgsApplication.qgisSettingsDirPath(), 'mapalab')
-    os.makedirs(carpeta, exist_ok=True)
-    return os.path.join(carpeta, ICONO_CACHE)
+    return os.path.join(carpeta(), ICONO_CACHE)
 
 
 def icono_guardado() -> Optional[str]:
@@ -84,8 +81,4 @@ def icono_guardado() -> Optional[str]:
 
 
 def guardar_icono(datos: bytes) -> None:
-    try:
-        with open(icono_cache_path(), 'wb') as handle:
-            handle.write(datos)
-    except OSError:
-        pass
+    escribir_atomico(icono_cache_path(), datos)

@@ -53,7 +53,7 @@ def icono_de_url(client: MapaLabClient, url: str) -> Optional[QIcon]:
     if url in _memoria:
         return _memoria[url]
 
-    datos = fetch_asset(client, [url])
+    datos = fetch_asset(client, [url], solo_cache=True)
     icono: Optional[QIcon] = None
     if datos:
         icono = _desde_svg(datos) if b'<svg' in datos[:400] else _desde_raster(datos)
@@ -72,7 +72,7 @@ def icono_de_tema(client: MapaLabClient, node: dict[str, Any],
     if clave in _memoria:
         return _memoria[clave]
 
-    datos = fetch_asset(client, tema_icono_urls(alias, hover))
+    datos = fetch_asset(client, tema_icono_urls(alias, hover), solo_cache=True)
     icono = _desde_svg(datos, TEMA_ICON_SIZE) if datos and b'<svg' in datos[:400] else None
     if icono is None and hover:
         icono = icono_de_tema(client, node, hover=False)
@@ -81,8 +81,12 @@ def icono_de_tema(client: MapaLabClient, node: dict[str, Any],
     return icono
 
 
+def olvidar_iconos() -> None:
+    _memoria.clear()
+
+
 def icono_de_recarga(client: MapaLabClient) -> QIcon:
-    datos = fetch_asset(client, refrescar_urls())
+    datos = fetch_asset(client, refrescar_urls(), solo_cache=True)
     if datos:
         pixmap = QPixmap()
         if pixmap.loadFromData(datos):

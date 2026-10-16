@@ -1,10 +1,13 @@
 from typing import Any, Callable, Optional
 
+from qgis.core import QgsProject
 from qgis.PyQt.QtCore import QEvent, QSize, Qt
-from qgis.PyQt.QtWidgets import QMenu, QTreeWidget, QTreeWidgetItem, QWidget
+from qgis.PyQt.QtWidgets import QMenu, QMessageBox, QTreeWidget, QTreeWidgetItem, QWidget
 
 from ..api.client import MapaLabClient
-from ..layers.grupos import es_grupo, grupo_cargado
+from ..config import NODE_ID_PROPERTY
+from ..layers.grupos import es_grupo
+from ..layers.proyecto import GRUPO_PROPERTY
 from ..model.tree import (
     clean_label,
     es_categoria,
@@ -33,6 +36,8 @@ class ArbolCatalogo(QTreeWidget):
         self._al_agregar = al_agregar
         self._hover_item: Optional[QTreeWidgetItem] = None
         self._silencio = False
+        self._cargados: set[str] = set()
+        self._grupos: set[str] = set()
 
         self.setHeaderHidden(True)
         self.header().setStretchLastSection(True)
@@ -40,7 +45,7 @@ class ArbolCatalogo(QTreeWidget):
         self.setMouseTracking(True)
         self.viewport().installEventFilter(self)
         self.setExpandsOnDoubleClick(False)
-        self._delegado = LayerItemDelegate(NODE_ROLE, self)
+        self._delegado = LayerItemDelegate(NODE_ROLE, self._cargados.__contains__, self)
         self.setItemDelegate(self._delegado)
         self.setIconSize(QSize(TEMA_ICON_SIZE, TEMA_ICON_SIZE))
         self.itemDoubleClicked.connect(self._on_double_click)
@@ -51,12 +56,21 @@ class ArbolCatalogo(QTreeWidget):
         self.itemChanged.connect(self._on_marcado)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._on_menu)
-        self.setExpandsOnDoubleClick(False)
+        self._actualizar_cargados()
+
+    def _actualizar_cargados(self) -> None:
+        self._cargados.clear()
+        self._grupos.clear()
+        for capa in QgsProject.instance().mapLayers().values():
+            self._cargados.add(str(capa.customProperty(NODE_ID_PROPERTY) or ''))
+            self._grupos.add(str(capa.customProperty(GRUPO_PROPERTY) or ''))
+        self._cargados.discard('')
+        self._grupos.discard('')
 
     def _on_menu(self, pos: Any) -> None:
         item = self.itemAt(pos)
         node = item.data(0, NODE_ROLE) if item is not None else None
-        if self._al_agregar is None or not isinstance(node, dict):
+        if self._al_agregar is None or not isinstance(node, dict) or is_disabled(node):
             return
         if not node.get('wmsConfig') and not es_grupo(node):
             return
@@ -111,6 +125,19 @@ class ArbolCatalogo(QTreeWidget):
         node = item.data(0, NODE_ROLE)
         return node if isinstance(node, dict) else None
 
+    def nodo_para_accion(self, permitir_grupo: bool = False) -> Optional[dict[str, Any]]:
+        node = self.nodo_actual()
+        if node is None:
+            QMessageBox.information(self, 'MapaLab', 'Selecciona una capa del árbol.')
+            return None
+        if permitir_grupo and es_grupo(node):
+            return node
+        if not node.get('wmsConfig'):
+            QMessageBox.information(
+                self, 'MapaLab', 'Ese elemento es una carpeta, no una capa.')
+            return None
+        return node
+
     def _build_item(self, node: dict[str, Any], es_raiz: bool = False) -> QTreeWidgetItem:
         item = QTreeWidgetItem([clean_label(node.get('label') or '')])
         item.setData(0, NODE_ROLE, node)
@@ -130,7 +157,7 @@ class ArbolCatalogo(QTreeWidget):
         return item
 
     def _estado(self, node: dict[str, Any]) -> Qt.CheckState:
-        cargado = grupo_cargado(str(node.get('id') or ''))
+        cargado = str(node.get('id') or '') in self._grupos
         return Qt.Checked if cargado else Qt.Unchecked
 
     def _on_marcado(self, item: QTreeWidgetItem, column: int) -> None:
@@ -141,6 +168,8 @@ class ArbolCatalogo(QTreeWidget):
             self._al_alternar(node, item.checkState(0) == Qt.Checked)
 
     def sincronizar(self, item: Optional[QTreeWidgetItem] = None) -> None:
+        if item is None:
+            self._actualizar_cargados()
         self._silencio = True
         try:
             hijos = ([self.topLevelItem(i) for i in range(self.topLevelItemCount())]
