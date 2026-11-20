@@ -11,6 +11,12 @@ CHANGELOG de aquel repositorio, entre sus versiones 1.117.0 y 1.128.1.
 
 ---
 
+## [No publicado]
+
+### Cambiado
+
+- El escaneo de seguridad (`scripts/scan.sh`) corre sobre `python:3.15-slim`.
+
 ## [0.17.0] - 2026-10-16
 
 Listo para el repositorio oficial de complementos de QGIS. Probado en QGIS 3.40 y 4.0.
