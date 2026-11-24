@@ -2,7 +2,7 @@ from typing import Any, Callable, Optional
 
 from qgis.gui import QgsCheckableComboBox
 from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtWidgets import QComboBox, QGridLayout, QLabel, QPushButton, QWidget
+from qgis.PyQt.QtWidgets import QComboBox, QGridLayout, QPushButton, QWidget
 
 from ..api.client import MapaLabClient
 from ..layers.filtros import (
@@ -20,43 +20,44 @@ from ..layers.filtros import (
 )
 from ..layers.grupos import es_grupo, hojas_de
 from ..layers.proyecto import capa_por_nodo
-from ..tasks import Coordinador, PeriodicidadTask
-from ..theme import color_de_rol, set_role
+from ..periodicidad import PeriodicidadTask
+from .menu_combo import como_menu
+from ..tasks import Coordinador
+from ..theme import set_role
 
-AYUDA_MUNICIPIO: str = ('Filtra la capa por municipio. Aplica al mapa, a la consulta por clic '
-                        'y a la descarga.')
+AYUDA_MUNICIPIO: str = ('Municipio: filtra la capa elegida y acerca el mapa a lo marcado. Sin '
+                        'marcar ninguno se ve todo Jalisco; marca uno o varios para ver solo '
+                        'esos. El filtro se aplica al mapa, a la consulta por clic y a la '
+                        'descarga en GeoPackage.')
 
-AYUDA_FECHA: str = ('Periodo que se dibuja. Arranca en el mismo que usa el visor; «Todas» '
-                    'quita el filtro y encima todos los periodos.')
+AYUDA_ZMG: str = ('Marca de un clic los municipios de la Zona Metropolitana de Guadalajara. '
+                  'Otro clic los desmarca.')
+
+AYUDA_ANIO: str = ('Año que se dibuja. Arranca en el mismo periodo que usa el visor; «Todas» '
+                   'quita el filtro y dibuja todos los periodos encimados. Se aplica al mapa, a '
+                   'la consulta por clic y a la descarga.')
+
+AYUDA_MES: str = 'Mes del año elegido; «Todo el año» junta los doce meses.'
+
+TEXTO_TODOS: str = 'Jalisco'
+
+VISIBLES: int = 12
 
 CLAVE_TAREA: str = 'periodicidad'
 
 Listo = Callable[[Filtro, Optional[str]], None]
 
 
-TAMANO_AYUDA: int = 18
-
-
-def _ayuda(texto: str) -> QLabel:
-    etiqueta = QLabel('?')
-    etiqueta.setToolTip(texto)
-    etiqueta.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    etiqueta.setFixedSize(TAMANO_AYUDA, TAMANO_AYUDA)
-    fondo = color_de_rol('badge', 'background-color', '#FF8300')
-    tinta = color_de_rol('primary', 'color', '#FFFFFF')
-    etiqueta.setStyleSheet(
-        f'QLabel {{ background-color: {fondo}; color: {tinta}; padding: 0px;'
-        f' border-radius: {TAMANO_AYUDA // 2}px; font-size: 11px; font-weight: 700; }}')
-    return etiqueta
-
-
 class ControlFiltros:
 
     def __init__(self, client: MapaLabClient, tareas: Coordinador,
-                 al_cambiar: Callable[[dict[str, Any], Filtro, Optional[str]], None]) -> None:
+                 al_cambiar: Callable[[dict[str, Any], Filtro, Optional[str]], None],
+                 al_acercar: Optional[Callable[[list[str]], Any]] = None) -> None:
         self._client = client
         self._tareas = tareas
         self._al_cambiar = al_cambiar
+        self._al_acercar = al_acercar
+        self._ultimos: list[str] = []
         self._node: Optional[dict[str, Any]] = None
         self._periodos: dict[str, tuple[dict[int, list[int]], Optional[str]]] = {}
         self._esperando: dict[str, list[Listo]] = {}
@@ -70,41 +71,39 @@ class ControlFiltros:
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setHorizontalSpacing(8)
 
-        self._etiqueta_mun = QLabel('Municipio')
         self._municipios = QgsCheckableComboBox()
-        self._municipios.setDefaultText('Todos')
+        self._municipios.setDefaultText(TEXTO_TODOS)
         self._municipios.checkedItemsChanged.connect(lambda _: self._cambio())
         self._zmg = QPushButton('ZMG')
-        self._zmg.setToolTip('Zona Metropolitana de Guadalajara')
         self._zmg.clicked.connect(self._marcar_zmg)
         set_role(self._zmg, 'secondary')
-        self._ayuda_mun = _ayuda(AYUDA_MUNICIPIO)
 
-        self._etiqueta_fecha = QLabel('Fecha')
         self._anio = QComboBox()
         self._anio.currentIndexChanged.connect(self._cambio_anio)
         self._mes = QComboBox()
         self._mes.currentIndexChanged.connect(lambda _: self._cambio())
-        self._ayuda_fecha = _ayuda(AYUDA_FECHA)
 
-        grid.addWidget(self._etiqueta_mun, 0, 0)
-        grid.addWidget(self._municipios, 0, 1, 1, 2)
-        grid.addWidget(self._zmg, 0, 3)
-        grid.addWidget(self._ayuda_mun, 0, 4)
-        grid.addWidget(self._etiqueta_fecha, 1, 0)
-        grid.addWidget(self._anio, 1, 1)
-        grid.addWidget(self._mes, 1, 2, 1, 2)
-        grid.addWidget(self._ayuda_fecha, 1, 4)
+        for widget, ayuda in ((self._municipios, AYUDA_MUNICIPIO), (self._zmg, AYUDA_ZMG),
+                              (self._anio, AYUDA_ANIO), (self._mes, AYUDA_MES)):
+            widget.setToolTip(ayuda)
+        for combo in (self._municipios, self._anio, self._mes):
+            combo.setMaxVisibleItems(VISIBLES)
+            como_menu(combo)
+
+        grid.addWidget(self._municipios, 0, 0, 1, 2)
+        grid.addWidget(self._zmg, 0, 2)
+        grid.addWidget(self._anio, 1, 0)
+        grid.addWidget(self._mes, 1, 1, 1, 2)
+        grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
-        grid.setColumnStretch(2, 1)
         return caja
 
     def _fila_municipio(self, visible: bool) -> None:
-        for widget in (self._etiqueta_mun, self._municipios, self._zmg, self._ayuda_mun):
+        for widget in (self._municipios, self._zmg):
             widget.setVisible(visible)
 
     def _fila_fecha(self, visible: bool) -> None:
-        for widget in (self._etiqueta_fecha, self._anio, self._mes, self._ayuda_fecha):
+        for widget in (self._anio, self._mes):
             widget.setVisible(visible)
 
     def cargar_municipios(self) -> None:
@@ -199,6 +198,7 @@ class ControlFiltros:
             marcado = self._municipios.itemData(indice) in filtro.municipios
             estado = Qt.CheckState.Checked if marcado else Qt.CheckState.Unchecked
             self._municipios.setItemCheckState(indice, estado)
+        self._ultimos = sorted(filtro.municipios)
 
         disponibles = periodos[0] if periodos else {}
         self._fila_fecha(bool(disponibles))
@@ -252,4 +252,8 @@ class ControlFiltros:
     def _cambio(self) -> None:
         if self._silencio or self._node is None:
             return
-        self._al_cambiar(self._node, self.filtro(), self.columna(self._node))
+        filtro = self.filtro()
+        self._al_cambiar(self._node, filtro, self.columna(self._node))
+        if sorted(filtro.municipios) != self._ultimos and self._al_acercar is not None:
+            self._al_acercar(filtro.municipios)
+        self._ultimos = sorted(filtro.municipios)

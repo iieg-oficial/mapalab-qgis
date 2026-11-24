@@ -18,6 +18,7 @@ from ..config import (
     api_url,
     eventos_url,
     get_base_url,
+    wfs_url,
 )
 
 
@@ -51,6 +52,25 @@ def _write_cache(carpeta: str, name: str, content: bytes) -> None:
     escribir_atomico(os.path.join(carpeta, name), content)
 
 
+Caja = tuple[float, float, float, float]
+
+
+def _puntos(coordenadas: Any) -> list[tuple[float, float]]:
+    if not isinstance(coordenadas, list) or not coordenadas:
+        return []
+    if isinstance(coordenadas[0], (int, float)):
+        return [(float(coordenadas[0]), float(coordenadas[1]))]
+    return [punto for parte in coordenadas for punto in _puntos(parte)]
+
+
+def _caja(geometria: Any) -> Optional[Caja]:
+    puntos = _puntos((geometria or {}).get('coordinates') if isinstance(geometria, dict) else None)
+    if not puntos:
+        return None
+    xs, ys = [p[0] for p in puntos], [p[1] for p in puntos]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
 def _parse_tree(texto: Optional[str]) -> Optional[list[dict[str, Any]]]:
     if not texto:
         return None
@@ -68,6 +88,7 @@ class MapaLabClient:
         self.desde_cache: bool = False
         self.municipios: list[dict[str, Any]] = []
         self.eventos: list[dict[str, Any]] = []
+        self.cajas: dict[str, Caja] = {}
 
     def olvidar(self) -> None:
         self._tree = None
@@ -182,6 +203,20 @@ class MapaLabClient:
         return (periodicidad if isinstance(periodicidad, dict) else {},
                 str(columna) if columna else None)
 
+    def fetch_campos(self, workspace: str, typename: str,
+                     feedback: Optional[QgsFeedback] = None) -> set[str]:
+        parametros = {'service': 'WFS', 'version': '2.0.0', 'request': 'DescribeFeatureType',
+                      'typeNames': typename}
+        try:
+            _, content, _ = self.request(f'{wfs_url(workspace)}?{urlencode(parametros)}',
+                                         feedback=feedback)
+        except MapaLabCancelado:
+            raise
+        except MapaLabError:
+            return set()
+        texto = content.decode('utf-8', errors='replace')
+        return set(re.findall(r'<(?:\w+:)?element\b[^>]*\bname="([^"]+)"', texto))
+
     def fetch_municipios(self, feedback: Optional[QgsFeedback] = None) -> list[dict[str, Any]]:
         payload = self._get_json('/municipios/', {}, feedback=feedback)
         if isinstance(payload, dict):
@@ -198,6 +233,23 @@ class MapaLabClient:
         if not isinstance(payload, list):
             return []
         return [item for item in payload if isinstance(item, dict)]
+
+    def fetch_cajas(self, feedback: Optional[QgsFeedback] = None) -> dict[str, Caja]:
+        try:
+            payload = self._get_json('/municipios/siluetas', {'source': 'iieg'}, feedback=feedback)
+        except MapaLabError:
+            return {}
+        municipios = payload.get('municipios') if isinstance(payload, dict) else None
+        cajas: dict[str, Caja] = {}
+        for municipio in municipios if isinstance(municipios, list) else []:
+            caja = _caja(municipio.get('geometry')) if isinstance(municipio, dict) else None
+            if caja is not None:
+                cajas[str(municipio.get('clave'))] = caja
+        return cajas
+
+    def cargar_extras(self, feedback: Optional[QgsFeedback] = None) -> None:
+        self.eventos = self.fetch_eventos(feedback)
+        self.cajas = self.fetch_cajas(feedback)
 
     def fetch_share(self, codigo: str, feedback: Optional[QgsFeedback] = None) -> dict[str, Any]:
         payload = self._get_json(f'/shares/{codigo}', {}, feedback=feedback)

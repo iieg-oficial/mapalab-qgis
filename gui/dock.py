@@ -21,6 +21,7 @@ from ..config import (
 )
 from ..layers.grupos import es_grupo, quitar_grupo
 from ..layers.limites import modo_actual
+from ..layers.zoom import acercar_a_municipios
 from ..model.eventos import temas_de_eventos
 from ..model.tree import filter_tree, menu_tree
 from ..theme import apply_theme, set_role
@@ -31,13 +32,12 @@ from .filtros import ControlFiltros
 from .operaciones import Operaciones
 from ..tasks import CargarArbolTask, Coordinador
 from .icons import boton_de_recarga, icono_de_recarga, olvidar_iconos
-from .filas import fila_acciones, fila_limpieza, fila_servidor
+from .en_mapa import EnMapa
+from .filas import AYUDA_AGREGAR, fila_acciones, fila_servidor
 from .switch import SwitchModoBase
 from .titlebar import Footer, montar_titulo
 
-TEXTO_CAPA: str = 'Agregar al mapa'
-
-TEXTO_GRUPO: str = 'Agregar grupo completo'
+AYUDA_GRUPO: str = 'Agrega al mapa todas las capas del grupo elegido, con el filtro del panel.'
 
 ESPERA_BUSQUEDA_MS: int = 200
 
@@ -57,7 +57,9 @@ class MapaLabDock(QDockWidget):
         self._actions = LayerActions(iface, self._client, self._tareas)
         self._tree: list[dict[str, Any]] = []
         self._filtros = ControlFiltros(self._client, self._tareas,
-                                       lambda *args: self._ops.al_cambiar(*args))
+                                       lambda *args: self._al_filtrar(*args),
+                                       lambda claves: acercar_a_municipios(
+                                           iface.mapCanvas(), self._client.cajas, claves))
         self._ops = Operaciones(iface, self._client, self._tareas, self._actions, self._filtros,
                                 self._mensaje, lambda: self._tree, self)
         self._consulta = ControlConsulta(iface, self._crear_consulta)
@@ -97,16 +99,17 @@ class MapaLabDock(QDockWidget):
         layout.addLayout(search_row)
 
         self._widget_tree = ArbolCatalogo(
-            self._client, self._on_add, self._alternar_grupo, self._cerrar_nodo,
-            self._agregar)
+            self._client, self._on_add, self._cerrar_nodo, self._agregar)
         self._widget_tree.itemSelectionChanged.connect(self._actualizar_add)
+        self._en_mapa = EnMapa(self._iface.mapCanvas(), self._widget_tree, lambda: self._tree,
+                               self._actions.remove_node)
+        layout.addWidget(self._en_mapa.panel)
         layout.addWidget(self._widget_tree)
         layout.addWidget(self._filtros.widget)
 
-        buttons, self._add_button, self._download_button = fila_acciones(
-            self._on_add, self._on_download, TEXTO_CAPA)
+        buttons, self._add_button = fila_acciones(
+            self._on_add, self._on_download, self._on_clear_seleccion, self.abrir_compartido)
         layout.addLayout(buttons)
-        layout.addLayout(fila_limpieza(self._on_clear_seleccion, self.abrir_compartido))
 
         self._status = QLabel('')
         self._status.setWordWrap(True)
@@ -152,6 +155,7 @@ class MapaLabDock(QDockWidget):
     def _sincronizar_switch(self, *args: Any) -> None:
         self._switch.mostrar(modo_actual())
         self._widget_tree.sincronizar()
+        self._en_mapa.refrescar()
 
     def _on_cambio_modo(self, modo: str) -> None:
         if not self._tree:
@@ -230,19 +234,20 @@ class MapaLabDock(QDockWidget):
 
     def _actualizar_add(self) -> None:
         node = self._widget_tree.nodo_actual()
-        self._add_button.setText(TEXTO_GRUPO if es_grupo(node) else TEXTO_CAPA)
+        self._add_button.setToolTip(AYUDA_GRUPO if es_grupo(node) else AYUDA_AGREGAR)
         self._filtros.mostrar(node)
         if node is not None and node.get('wmsConfig') and self.isVisible():
             self._consulta.activar(forzar=True)
 
-    def _cerrar_nodo(self, node: dict[str, Any]) -> None:
-        self._actions.remove_node(str(node.get('id') or ''))
+    def _al_filtrar(self, *args: Any) -> None:
+        self._ops.al_cambiar(*args)
+        self._en_mapa.refrescar()
 
-    def _alternar_grupo(self, node: dict[str, Any], marcado: bool) -> None:
-        if marcado:
-            self._agregar(node)
-        else:
+    def _cerrar_nodo(self, node: dict[str, Any]) -> None:
+        if es_grupo(node):
             quitar_grupo(str(node.get('id') or ''))
+        else:
+            self._actions.remove_node(str(node.get('id') or ''))
 
     def _mensaje(self, texto: str) -> None:
         self._status.setText(texto)
@@ -259,8 +264,8 @@ class MapaLabDock(QDockWidget):
         self._ops.abrir_compartido()
 
     def _on_clear_seleccion(self) -> None:
-        quitadas = self._actions.clear_selections()
-        self._mensaje('' if quitadas else 'No hay capas de selección en el proyecto.')
+        self._actions.clear_selections()
+        self._mensaje('')
 
     def _on_add(self) -> None:
         node = self._widget_tree.nodo_para_accion(permitir_grupo=True)
@@ -288,5 +293,6 @@ class MapaLabDock(QDockWidget):
 
     def cerrar(self) -> None:
         self._consulta.desactivar()
+        self._en_mapa.cerrar()
         self._desconectar_proyecto()
         self._tareas.cancelar_todo()

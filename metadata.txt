@@ -30,8 +30,9 @@ tags=web,wms,wfs,catalog,catalogo,geopackage,mexico,jalisco,iieg,mapalab,inegi,o
 category=Web
 icon=icon.svg
 changelog=
-    0.18.0 Active events of the web viewer appear at the top of the catalog while they last. Layers
-    and themes hidden in the viewer menu are hidden here too.
+    0.18.0 Active events of the web viewer at the top of the catalog. Hidden layers stay hidden.
+    Loaded layers listed in the panel and on the map. Zoom to the selected municipalities. Actions in
+    one row, branded dropdowns, and fixes to the municipality filter and to removing groups.
     0.17.0 QGIS 4 support (Qt 6). English description and documentation. Security scan clean.
     0.16.0 Filter by municipality and date, applied live to loaded layers, to click queries and to
     downloads. Open maps shared from the web viewer with their layers, filters, view and notes.
