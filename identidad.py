@@ -62,6 +62,14 @@ def tema_icono_urls(alias: str, hover: bool = False) -> list[str]:
     return [propio, respaldo]
 
 
+def tema_override_url(node: dict[str, Any], hover: bool = False) -> str:
+    overrides = node.get('iconOverrides')
+    if not isinstance(overrides, dict):
+        return ''
+    ruta = str(overrides.get('hover' if hover else 'normal') or overrides.get('normal') or '')
+    return f'{get_base_url()}{ruta}' if ruta.startswith('/') else ruta
+
+
 def refrescar_urls() -> list[str]:
     base = get_base_url()
     propio = f'{base}{ICONOS_PATH}/{REFRESH_ARCHIVO}' if base else ''
