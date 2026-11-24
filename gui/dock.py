@@ -21,7 +21,8 @@ from ..config import (
 )
 from ..layers.grupos import es_grupo, quitar_grupo
 from ..layers.limites import modo_actual
-from ..model.tree import filter_tree
+from ..model.eventos import temas_de_eventos
+from ..model.tree import filter_tree, menu_tree
 from ..theme import apply_theme, set_role
 from .actions import LayerActions
 from .arbol import ArbolCatalogo
@@ -216,11 +217,14 @@ class MapaLabDock(QDockWidget):
         self._mensaje(f'No se pudo cargar el catálogo: {detalle}')
         self._url_row.setVisible(True)
 
+    def _menu(self) -> list[dict[str, Any]]:
+        return temas_de_eventos(self._client.eventos, self._tree) + menu_tree(self._tree)
+
     def _aplicar_busqueda(self) -> None:
         if not self._tree:
             return
         texto = self._search.text().strip()
-        self._widget_tree.poblar(filter_tree(self._tree, texto))
+        self._widget_tree.poblar(filter_tree(self._menu(), texto))
         if texto:
             self._widget_tree.expandAll()
 

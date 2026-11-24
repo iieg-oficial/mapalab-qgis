@@ -13,9 +13,24 @@ CHANGELOG de aquel repositorio, entre sus versiones 1.117.0 y 1.128.1.
 
 ## [No publicado]
 
+## [0.18.0] - 2026-11-24
+
+### Agregado
+
+- **Eventos vigentes** al inicio del catálogo, como un tema más con su icono, sus etiquetas,
+  categorías y capas (con el alias del evento). Solo aparecen mientras el visor los publica; los
+  eventos *lite*, que no traen capas, y los que no resuelven ninguna capa del catálogo no se
+  muestran. Sin conexión, el catálogo guardado se abre sin eventos.
+
 ### Cambiado
 
 - El escaneo de seguridad (`scripts/scan.sh`) corre sobre `python:3.15-slim`.
+
+### Corregido
+
+- El catálogo respeta los temas y capas ocultos del menú del visor (`hiddenInMenu`): ya no
+  aparecen Ortofotos ni el tema de eventos autocreado. Siguen disponibles para abrir mapas
+  compartidos.
 
 ## [0.17.0] - 2026-10-16
 

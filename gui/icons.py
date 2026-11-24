@@ -40,25 +40,28 @@ def _desde_svg(datos: bytes, tamano: int = ICON_SIZE) -> Optional[QIcon]:
     return QIcon(QPixmap.fromImage(imagen))
 
 
-def _desde_raster(datos: bytes) -> Optional[QIcon]:
+def _desde_raster(datos: bytes, tamano: int = ICON_SIZE) -> Optional[QIcon]:
     pixmap = QPixmap()
     if not pixmap.loadFromData(datos):
         return None
-    return QIcon(pixmap.scaledToHeight(ICON_SIZE))
+    return QIcon(pixmap.scaledToHeight(tamano))
 
 
-def icono_de_url(client: MapaLabClient, url: str) -> Optional[QIcon]:
+def icono_de_url(client: MapaLabClient, url: str,
+                 tamano: int = ICON_SIZE) -> Optional[QIcon]:
     if not url:
         return None
-    if url in _memoria:
-        return _memoria[url]
+    clave = f'{url}:{tamano}'
+    if clave in _memoria:
+        return _memoria[clave]
 
     datos = fetch_asset(client, [url], solo_cache=True)
     icono: Optional[QIcon] = None
     if datos:
-        icono = _desde_svg(datos) if b'<svg' in datos[:400] else _desde_raster(datos)
+        es_svg = b'<svg' in datos[:400]
+        icono = _desde_svg(datos, tamano) if es_svg else _desde_raster(datos, tamano)
 
-    _memoria[url] = icono
+    _memoria[clave] = icono
     return icono
 
 
@@ -110,7 +113,7 @@ def icono_de_nodo(client: MapaLabClient, node: dict[str, Any],
                   es_raiz: bool = False, hover: bool = False) -> Optional[QIcon]:
     url = node.get('iconUrl')
     if isinstance(url, str) and url:
-        return icono_de_url(client, url)
+        return icono_de_url(client, url, TEMA_ICON_SIZE if es_raiz else ICON_SIZE)
     if es_raiz:
         return icono_de_tema(client, node, hover)
     return None

@@ -9,6 +9,7 @@ from .config import LOGOS
 from .identidad import guardar_icono, icono_urls, logo_urls, refrescar_urls, tema_icono_urls
 from .layers.metadata import apply_metadata
 from .layers.vector import add_vector_layer, download_vector
+from .model.eventos import temas_de_eventos
 from .model.tree import alias_de_tema, clean_label, hydrate_tree, workspace_and_layer
 
 PESO_CATALOGO: float = 40.0
@@ -64,6 +65,7 @@ class CargarArbolTask(_TareaMapaLab):
         return not self.isCanceled()
 
     def _cargar_municipios(self) -> None:
+        self._client.eventos = self._client.fetch_eventos(self._feedback)
         try:
             self._client.municipios = self._client.fetch_municipios(feedback=self._feedback)
         except MapaLabError:
@@ -78,6 +80,7 @@ class CargarArbolTask(_TareaMapaLab):
             if alias:
                 listas.extend([tema_icono_urls(alias), tema_icono_urls(alias, True)])
         listas.extend(_urls_de_nodos(self._arbol))
+        listas.extend(_urls_de_nodos(temas_de_eventos(self._client.eventos, self._arbol)))
         return listas
 
     def _precargar(self) -> None:
