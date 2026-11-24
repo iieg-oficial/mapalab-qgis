@@ -68,6 +68,17 @@ def matches(node: dict[str, Any], query: str) -> bool:
     return any(needle in normalize(str(value)) for value in haystack)
 
 
+def menu_tree(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    visibles: list[dict[str, Any]] = []
+    for node in nodes:
+        if node.get('hiddenInMenu'):
+            continue
+        item = dict(node)
+        item['children'] = menu_tree(node.get('children') or [])
+        visibles.append(item)
+    return visibles
+
+
 def filter_tree(nodes: list[dict[str, Any]], query: str) -> list[dict[str, Any]]:
     if not query:
         return nodes

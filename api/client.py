@@ -16,6 +16,7 @@ from ..config import (
     REQUEST_TIMEOUT_MS,
     TREE_CACHE_FILE,
     api_url,
+    eventos_url,
     get_base_url,
 )
 
@@ -66,6 +67,7 @@ class MapaLabClient:
         self._tree: Optional[list[dict[str, Any]]] = None
         self.desde_cache: bool = False
         self.municipios: list[dict[str, Any]] = []
+        self.eventos: list[dict[str, Any]] = []
 
     def olvidar(self) -> None:
         self._tree = None
@@ -142,7 +144,7 @@ class MapaLabClient:
             raise
         except MapaLabError:
             if cached_tree is not None:
-                self._tree, self.desde_cache = cached_tree, True
+                self._tree, self.desde_cache, self.eventos = cached_tree, True, []
                 return self._tree
             raise
 
@@ -186,6 +188,16 @@ class MapaLabClient:
             items = payload.get('items') or []
             return [item for item in items if isinstance(item, dict)]
         return []
+
+    def fetch_eventos(self, feedback: Optional[QgsFeedback] = None) -> list[dict[str, Any]]:
+        try:
+            status, content, _ = self.request(eventos_url(), feedback=feedback)
+            payload = self._decode_json(status, content, 'Eventos')
+        except MapaLabError:
+            return []
+        if not isinstance(payload, list):
+            return []
+        return [item for item in payload if isinstance(item, dict)]
 
     def fetch_share(self, codigo: str, feedback: Optional[QgsFeedback] = None) -> dict[str, Any]:
         payload = self._get_json(f'/shares/{codigo}', {}, feedback=feedback)
