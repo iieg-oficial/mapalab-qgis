@@ -114,12 +114,70 @@ def color_de_rol(rol: str, propiedad: str, respaldo: str) -> str:
     return _color(_bloque_de_rol(rol), propiedad, respaldo)
 
 
+FLECHA_ICON: str = 'flecha.svg'
+
+FONDO_TARJETA: str = '#F3F4F5'
+
+
+def _ruta_asset(archivo: str) -> str:
+    return os.path.join(os.path.dirname(__file__), ASSETS_DIR, archivo).replace('\\', '/')
+
+
+def _reglas_combo() -> str:
+    fondo = color_de_rol('search', 'background-color', '#EAEFFA')
+    tinta = color_de_rol('search', 'color', '#5C2472')
+    acento = color_de_rol('primary', 'background-color', '#5C2472')
+    realce = color_de_selector('QTreeView::item:selected', 'background-color', '#FFE9CC')
+    realce_tinta = color_de_selector('QTreeView::item:selected', 'color', '#A85700')
+    return (
+        f'QComboBox {{ background-color: {fondo}; color: {tinta}; border: 1px solid {fondo};'
+        ' border-radius: 16px; padding: 6px 12px; combobox-popup: 0; }\n'
+        f'QComboBox:hover, QComboBox:focus, QComboBox:on {{ border: 1px solid {acento}; }}\n'
+        'QComboBox:disabled { color: palette(disabled-text); }\n'
+        'QComboBox::drop-down { border: none; width: 28px;'
+        ' subcontrol-origin: padding; subcontrol-position: center right; }\n'
+        f'QComboBox::down-arrow {{ image: url("{_ruta_asset(FLECHA_ICON)}");'
+        ' width: 12px; height: 12px; }\n'
+        f'QComboBox QAbstractItemView {{ background-color: #FFFFFF; color: {tinta};'
+        f' border: 1px solid {fondo}; border-radius: 8px; padding: 4px; outline: none;'
+        f' selection-background-color: {realce}; selection-color: {realce_tinta}; }}\n'
+        'QComboBox QAbstractItemView::item { padding: 6px 8px; min-height: 22px; }\n'
+    )
+
+
+def _reglas_en_mapa() -> str:
+    tinta = color_de_rol('search', 'color', '#5C2472')
+    gris = color_de_rol('quiet', 'color', '#465055')
+    radio = _color(_bloque_de_rol('search'), 'border-radius', '16px')
+    tarjeta = f'background-color: {FONDO_TARJETA}; border: none; border-radius: {radio};'
+    quitar = f'color: {gris}; border: none; background: transparent; font-size: 13px;'
+    return (
+        f'QWidget[brandRole="mapa-tarjeta"] {{ {tarjeta} }}\n'
+        f'QWidget[brandRole="mapa-fondo"] {{ {tarjeta} }}\n'
+        'QWidget[brandRole="mapa-lista"] { background: transparent; border: none; }\n'
+        f'QLabel[brandRole="mapa-contador"] {{ background-color: {tinta}; color: #FFFFFF;'
+        ' border-radius: 9px; padding: 0px 7px; font-size: 12px; font-weight: 700;'
+        ' min-height: 18px; max-height: 18px; }\n'
+        f'QLabel[brandRole="mapa-titulo"] {{ color: {tinta}; font-size: 13px;'
+        ' font-weight: 700; padding: 0px 4px; border: none; background: transparent; }\n'
+        f'QPushButton[brandRole="mapa-capa"] {{ text-align: left; color: {gris}; border: none;'
+        ' background: transparent; padding: 4px 6px; font-size: 14px; }\n'
+        f'QPushButton[brandRole="mapa-capa"]:hover {{ color: {tinta}; background-color: #FFFFFF;'
+        ' border-radius: 8px; }\n'
+        f'QPushButton[brandRole="mapa-quitar"] {{ {quitar} padding: 2px 6px; }}\n'
+        f'QPushButton[brandRole="mapa-quitar-fuera"] {{ {quitar} padding: 0px; }}\n'
+        'QPushButton[brandRole="mapa-quitar"]:hover,'
+        f' QPushButton[brandRole="mapa-quitar-fuera"]:hover {{ color: {tinta}; }}\n'
+    )
+
+
 def _reglas_locales() -> str:
     return (
         '\nQTreeView::branch, QTreeWidget::branch {\n'
         '    image: none;\n'
         '}\n'
-    )
+        'QPushButton[brandRole="quiet"] { text-align: center; }\n'
+    ) + _reglas_combo() + _reglas_en_mapa()
 
 
 def build_stylesheet() -> str:

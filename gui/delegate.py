@@ -130,7 +130,7 @@ class LayerItemDelegate(QStyledItemDelegate):
         return QRect(rect.left() + CERRAR_GAP, top, CERRAR_SIZE, CERRAR_SIZE)
 
     def hay_cerrar(self, node: Any) -> bool:
-        if not isinstance(node, dict) or not node.get('wmsConfig'):
+        if not isinstance(node, dict):
             return False
         return self._esta_cargado(str(node.get('id') or ''))
 
@@ -279,7 +279,7 @@ class LayerItemDelegate(QStyledItemDelegate):
         if chevron:
             self._pintar_chevron(painter, self._rect_chevron(option.rect),
                                  bool(option.state & QStyle.StateFlag.State_Open))
-        elif cerrar:
+        if cerrar:
             self._pintar_cerrar(painter, self.rect_cerrar(option.rect))
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:

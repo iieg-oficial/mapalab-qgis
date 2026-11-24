@@ -6,7 +6,7 @@ from qgis.PyQt.QtWidgets import QPushButton
 
 from ..api.client import MapaLabClient
 from ..assets_cache import fetch_asset
-from ..identidad import refrescar_urls, tema_icono_urls
+from ..identidad import refrescar_urls, tema_icono_urls, tema_override_url
 from ..model.tree import alias_de_tema
 from ..theme import icono_refrescar, set_role
 
@@ -114,6 +114,9 @@ def icono_de_nodo(client: MapaLabClient, node: dict[str, Any],
     url = node.get('iconUrl')
     if isinstance(url, str) and url:
         return icono_de_url(client, url, TEMA_ICON_SIZE if es_raiz else ICON_SIZE)
+    propio = tema_override_url(node, hover) if es_raiz else ''
+    if propio:
+        return icono_de_url(client, propio, TEMA_ICON_SIZE)
     if es_raiz:
         return icono_de_tema(client, node, hover)
     return None

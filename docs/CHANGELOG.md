@@ -21,9 +21,18 @@ CHANGELOG de aquel repositorio, entre sus versiones 1.117.0 y 1.128.1.
   categorías y capas (con el alias del evento). Solo aparecen mientras el visor los publica; los
   eventos *lite*, que no traen capas, y los que no resuelven ninguna capa del catálogo no se
   muestran. Sin conexión, el catálogo guardado se abre sin eventos.
+- **Capas seleccionadas**: las capas y grupos cargados quedan fijos arriba del árbol y en una
+  tarjeta sobre el mapa, con su contador, clic para ubicarlas en el catálogo y ✕ para quitarlas.
+  En el panel la tarjeta tiene el ancho del buscador y las ✕ quedan afuera, alineadas con recargar.
+- Marcar municipios (o ZMG) acerca el mapa a ellos; desmarcarlos vuelve a todo Jalisco.
 
 ### Cambiado
 
+- Las cuatro acciones en una sola fila: **Agregar**, **Descargar**, **Limpiar** y **Abrir**, cada una
+  con su explicación en el tooltip; las dos primeras se llevan más ancho.
+- Municipio y fecha sin etiqueta, con la ayuda en el tooltip de cada control; sin municipio marcado
+  el filtro dice «Jalisco». Los desplegables llevan la identidad del instituto y sus listas se ven
+  como el menú: sin casillas, lo elegido en naranja y el resto con realce gris al pasar.
 - El escaneo de seguridad (`scripts/scan.sh`) corre sobre `python:3.15-slim`.
 
 ### Corregido
@@ -31,6 +40,17 @@ CHANGELOG de aquel repositorio, entre sus versiones 1.117.0 y 1.128.1.
 - El catálogo respeta los temas y capas ocultos del menú del visor (`hiddenInMenu`): ya no
   aparecen Ortofotos ni el tema de eventos autocreado. Siguen disponibles para abrir mapas
   compartidos.
+- La lista de años se cerraba al hacer clic: se abría encima del control y el clic elegía el año
+  actual. Ahora despliega hacia abajo, con doce opciones visibles.
+- Sin el aviso «No hay capas de selección en el proyecto» al limpiar.
+- El filtro por municipio no hacía nada en las capas cuyo campo declarado no existe en el servicio
+  (`clave_municipio` donde la capa publica `cvegeo_municipio`): ahora se usa el campo que la capa
+  sí tiene, en el orden `clave_municipio`, `clave_geo`, `cvegeo_municipio`, `municipio`, `nombre`.
+- La ✕ de la primera capa agregada no aparecía en el árbol hasta agregar otra.
+- Los temas con icono propio en el visor (como «Recursos y calidad de vida») salían sin icono.
+- Quitar un grupo, o cambiarle el filtro, borraba también todas las demás capas sueltas del
+  proyecto y dejaba el mapa en blanco.
+- Los grupos ya no llevan casilla: se agregan con **Agregar** y se quitan con la ✕, como las capas.
 
 ## [0.17.0] - 2026-10-16
 

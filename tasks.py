@@ -6,7 +6,14 @@ from qgis.core import QgsApplication, QgsFeedback, QgsProject, QgsTask
 from .api.client import MapaLabCancelado, MapaLabClient, MapaLabError
 from .assets_cache import fetch_asset
 from .config import LOGOS
-from .identidad import guardar_icono, icono_urls, logo_urls, refrescar_urls, tema_icono_urls
+from .identidad import (
+    guardar_icono,
+    icono_urls,
+    logo_urls,
+    refrescar_urls,
+    tema_icono_urls,
+    tema_override_url,
+)
 from .layers.metadata import apply_metadata
 from .layers.vector import add_vector_layer, download_vector
 from .model.eventos import temas_de_eventos
@@ -65,7 +72,7 @@ class CargarArbolTask(_TareaMapaLab):
         return not self.isCanceled()
 
     def _cargar_municipios(self) -> None:
-        self._client.eventos = self._client.fetch_eventos(self._feedback)
+        self._client.cargar_extras(self._feedback)
         try:
             self._client.municipios = self._client.fetch_municipios(feedback=self._feedback)
         except MapaLabError:
@@ -76,6 +83,7 @@ class CargarArbolTask(_TareaMapaLab):
         for marca in LOGOS:
             listas.extend([logo_urls(marca, False), logo_urls(marca, True)])
         for nodo in self._arbol:
+            listas.extend([[tema_override_url(nodo)], [tema_override_url(nodo, True)]])
             alias = alias_de_tema(nodo)
             if alias:
                 listas.extend([tema_icono_urls(alias), tema_icono_urls(alias, True)])
@@ -228,40 +236,6 @@ class ConsultaTask(_TareaMapaLab):
             self.listo.emit(self._texto)
         elif not self.isCanceled():
             self.fallo.emit(f'No se pudo consultar la capa: {self._error}')
-
-
-class PeriodicidadTask(_TareaMapaLab):
-
-    listo = pyqtSignal(dict, str)
-    fallo = pyqtSignal(str)
-
-    def __init__(self, client: MapaLabClient, node: dict[str, Any]) -> None:
-        super().__init__('MapaLab: fechas de la capa', QgsTask.Flag.CanCancel | QgsTask.Flag.Silent)
-        self._client = client
-        self._node = node
-        self._periodicidad: dict[str, Any] = {}
-        self._columna = ''
-
-    def run(self) -> bool:
-        wms_config = self._node.get('wmsConfig') or {}
-        workspace = wms_config.get('geoserverWorkspace') or wms_config.get('workspace') or ''
-        layer = wms_config.get('geoserverLayer') or ''
-        if not workspace or not layer:
-            return True
-        try:
-            self._periodicidad, columna = self._client.fetch_periodicity(
-                workspace, layer, feedback=self._feedback)
-        except MapaLabError as exc:
-            self._error = str(exc)
-            return False
-        self._columna = columna or ''
-        return True
-
-    def finished(self, result: bool) -> None:
-        if result:
-            self.listo.emit(self._periodicidad, self._columna)
-        elif not self.isCanceled():
-            self.fallo.emit(self._error)
 
 
 class Coordinador:
