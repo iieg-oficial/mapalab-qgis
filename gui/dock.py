@@ -4,8 +4,6 @@ from qgis.core import QgsProject
 from qgis.PyQt.QtCore import QTimer
 from qgis.PyQt.QtWidgets import (
     QDockWidget,
-    QHBoxLayout,
-    QLabel,
     QLineEdit,
     QVBoxLayout,
     QWidget,
@@ -33,11 +31,9 @@ from .operaciones import Operaciones
 from ..tasks import CargarArbolTask, Coordinador
 from .icons import boton_de_recarga, icono_de_recarga, olvidar_iconos
 from .en_mapa import EnMapa
-from .filas import AYUDA_AGREGAR, fila_acciones, fila_servidor
+from .filas import acciones_titulo, boton_compartido, fila_servidor
 from .switch import SwitchModoBase
 from .titlebar import Footer, montar_titulo
-
-AYUDA_GRUPO: str = 'Agrega al mapa todas las capas del grupo elegido, con el filtro del panel.'
 
 ESPERA_BUSQUEDA_MS: int = 200
 
@@ -59,7 +55,8 @@ class MapaLabDock(QDockWidget):
         self._filtros = ControlFiltros(self._client, self._tareas,
                                        lambda *args: self._al_filtrar(*args),
                                        lambda claves: acercar_a_municipios(
-                                           iface.mapCanvas(), self._client.cajas, claves))
+                                           iface.mapCanvas(), self._client.cajas, claves,
+                                           self._en_mapa.ocupado()))
         self._ops = Operaciones(iface, self._client, self._tareas, self._actions, self._filtros,
                                 self._mensaje, lambda: self._tree, self)
         self._consulta = ControlConsulta(iface, self._crear_consulta)
@@ -89,32 +86,17 @@ class MapaLabDock(QDockWidget):
         self._search.textChanged.connect(lambda _: self._espera.start())
         set_role(self._search, 'search')
 
-        search_row = QHBoxLayout()
-        search_row.setContentsMargins(0, 0, 0, 0)
-        search_row.setSpacing(8)
         self._reload_button = boton_de_recarga(
             self._client, lambda: self.load_tree(force=True))
-        search_row.addWidget(self._search)
-        search_row.addWidget(self._reload_button)
-        layout.addLayout(search_row)
+        layout.addWidget(self._search)
 
         self._widget_tree = ArbolCatalogo(
             self._client, self._on_add, self._cerrar_nodo, self._agregar)
         self._widget_tree.itemSelectionChanged.connect(self._actualizar_add)
-        self._en_mapa = EnMapa(self._iface.mapCanvas(), self._widget_tree, lambda: self._tree,
-                               self._actions.remove_node)
-        layout.addWidget(self._en_mapa.panel)
+        self._en_mapa = EnMapa(self._iface, self._widget_tree, lambda: self._tree,
+                               self._actions.remove_node, self._filtros, self._switch,
+                               self._ops.descargar, lambda: self._client.cajas)
         layout.addWidget(self._widget_tree)
-        layout.addWidget(self._filtros.widget)
-
-        buttons, self._add_button = fila_acciones(
-            self._on_add, self._on_download, self._on_clear_seleccion, self.abrir_compartido)
-        layout.addLayout(buttons)
-
-        self._status = QLabel('')
-        self._status.setWordWrap(True)
-        self._status.setVisible(False)
-        layout.addWidget(self._status)
 
         self._footer = Footer(self._client, FOOTER_BAR_HEIGHT, FOOTER_LOGO_HEIGHT)
         layout.addWidget(self._footer)
@@ -125,7 +107,8 @@ class MapaLabDock(QDockWidget):
         self.setWidget(container)
 
         apply_theme(container)
-        self._titulo = montar_titulo(self, self._client, self._switch)
+        self._titulo = montar_titulo(self, self._client, acciones_titulo(
+            self._reload_button, boton_compartido(self.abrir_compartido)))
         self._montar_identidad()
 
     def _montar_identidad(self) -> None:
@@ -234,8 +217,8 @@ class MapaLabDock(QDockWidget):
 
     def _actualizar_add(self) -> None:
         node = self._widget_tree.nodo_actual()
-        self._add_button.setToolTip(AYUDA_GRUPO if es_grupo(node) else AYUDA_AGREGAR)
         self._filtros.mostrar(node)
+        self._en_mapa.abrir(str((node or {}).get('id') or ''))
         if node is not None and node.get('wmsConfig') and self.isVisible():
             self._consulta.activar(forzar=True)
 
@@ -250,8 +233,7 @@ class MapaLabDock(QDockWidget):
             self._actions.remove_node(str(node.get('id') or ''))
 
     def _mensaje(self, texto: str) -> None:
-        self._status.setText(texto)
-        self._status.setVisible(bool(texto))
+        self._en_mapa.avisar(texto)
 
     def _reportar(self, resultado: tuple[bool, str]) -> None:
         self._mensaje(resultado[1])
@@ -262,10 +244,6 @@ class MapaLabDock(QDockWidget):
 
     def abrir_compartido(self) -> None:
         self._ops.abrir_compartido()
-
-    def _on_clear_seleccion(self) -> None:
-        self._actions.clear_selections()
-        self._mensaje('')
 
     def _on_add(self) -> None:
         node = self._widget_tree.nodo_para_accion(permitir_grupo=True)
@@ -285,11 +263,6 @@ class MapaLabDock(QDockWidget):
     def hideEvent(self, evento: Any) -> None:
         super().hideEvent(evento)
         self._consulta.desactivar()
-
-    def _on_download(self) -> None:
-        node = self._widget_tree.nodo_para_accion()
-        if node is not None:
-            self._ops.descargar(node)
 
     def cerrar(self) -> None:
         self._consulta.desactivar()

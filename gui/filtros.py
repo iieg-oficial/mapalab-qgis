@@ -2,7 +2,7 @@ from typing import Any, Callable, Optional
 
 from qgis.gui import QgsCheckableComboBox
 from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtWidgets import QComboBox, QGridLayout, QPushButton, QWidget
+from qgis.PyQt.QtWidgets import QComboBox, QGridLayout, QPushButton, QSizePolicy, QWidget
 
 from ..api.client import MapaLabClient
 from ..layers.filtros import (
@@ -22,6 +22,7 @@ from ..layers.grupos import es_grupo, hojas_de
 from ..layers.proyecto import capa_por_nodo
 from ..periodicidad import PeriodicidadTask
 from .menu_combo import como_menu
+from .pildora_fecha import etiqueta
 from ..tasks import Coordinador
 from ..theme import set_role
 
@@ -62,11 +63,14 @@ class ControlFiltros:
         self._periodos: dict[str, tuple[dict[int, list[int]], Optional[str]]] = {}
         self._esperando: dict[str, list[Listo]] = {}
         self._silencio = False
+        self._con_fecha = False
+        self.al_mostrar: Optional[Callable[[], None]] = None
         self.widget = self._construir()
         self.mostrar(None)
 
     def _construir(self) -> QWidget:
         caja = QWidget()
+        caja.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         grid = QGridLayout(caja)
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setHorizontalSpacing(8)
@@ -76,6 +80,7 @@ class ControlFiltros:
         self._municipios.checkedItemsChanged.connect(lambda _: self._cambio())
         self._zmg = QPushButton('ZMG')
         self._zmg.clicked.connect(self._marcar_zmg)
+        self._zmg.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         set_role(self._zmg, 'secondary')
 
         self._anio = QComboBox()
@@ -90,12 +95,9 @@ class ControlFiltros:
             combo.setMaxVisibleItems(VISIBLES)
             como_menu(combo)
 
-        grid.addWidget(self._municipios, 0, 0, 1, 2)
-        grid.addWidget(self._zmg, 0, 2)
-        grid.addWidget(self._anio, 1, 0)
-        grid.addWidget(self._mes, 1, 1, 1, 2)
+        grid.addWidget(self._municipios, 0, 0)
+        grid.addWidget(self._zmg, 0, 1)
         grid.setColumnStretch(0, 1)
-        grid.setColumnStretch(1, 1)
         return caja
 
     def _fila_municipio(self, visible: bool) -> None:
@@ -103,8 +105,38 @@ class ControlFiltros:
             widget.setVisible(visible)
 
     def _fila_fecha(self, visible: bool) -> None:
-        for widget in (self._anio, self._mes):
-            widget.setVisible(visible)
+        self._con_fecha = visible
+
+    def clave_con_fecha(self) -> Optional[str]:
+        return self._clave(self._node) if self._node is not None and self._con_fecha else None
+
+    def periodo_de(self, clave: str) -> Optional[str]:
+        capa = capa_por_nodo(clave)
+        filtro = filtro_de_capa(capa) if capa is not None else None
+        periodos = self._periodos.get(clave)
+        if filtro is None or (filtro.anio is None and not (periodos and periodos[0])):
+            return None
+        return etiqueta(filtro.anio, filtro.mes)
+
+    def periodos_actuales(self) -> dict[int, list[int]]:
+        periodos = self._periodos_de(self._node) if self._node is not None else None
+        return periodos[0] if periodos else {}
+
+    def fecha_actual(self) -> tuple[Optional[int], Optional[int]]:
+        return self._anio.currentData(), self._mes.currentData()
+
+    def elegir_fecha(self, anio: Optional[int], mes: Optional[int]) -> None:
+        if self._node is None:
+            return
+        self._silencio = True
+        self._anio.setCurrentIndex(max(0, self._anio.findData(anio)))
+        self._llenar_meses(self.periodos_actuales().get(anio) or [], mes)
+        self._silencio = False
+        self._cambio()
+
+    def _avisar(self) -> None:
+        if self.al_mostrar is not None:
+            self.al_mostrar()
 
     def cargar_municipios(self) -> None:
         self._silencio = True
@@ -181,6 +213,7 @@ class ControlFiltros:
         if self._node is None:
             self._fila_municipio(False)
             self._fila_fecha(False)
+            self._avisar()
             return
 
         capa = capa_por_nodo(self._clave(self._node))
@@ -209,6 +242,7 @@ class ControlFiltros:
         self._anio.setCurrentIndex(max(0, self._anio.findData(filtro.anio)))
         self._llenar_meses(disponibles.get(filtro.anio) or [], filtro.mes)
         self._silencio = False
+        self._avisar()
 
     def _llenar_meses(self, meses: list[int], elegido: Optional[int]) -> None:
         self._mes.clear()

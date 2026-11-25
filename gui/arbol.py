@@ -14,6 +14,7 @@ from ..model.tree import (
     es_etiqueta,
     is_disabled,
 )
+from .bordes_scroll import BordesScroll
 from .delegate import LayerItemDelegate
 from .icons import TEMA_ICON_SIZE, icono_de_nodo
 
@@ -58,6 +59,7 @@ class ArbolCatalogo(QTreeWidget):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._on_menu)
         self._actualizar_cargados()
+        BordesScroll(self)
 
     def _actualizar_cargados(self) -> None:
         self._cargados.clear()
@@ -224,3 +226,5 @@ class ArbolCatalogo(QTreeWidget):
         node = item.data(0, NODE_ROLE)
         if isinstance(node, dict) and node.get('wmsConfig'):
             self._al_activar()
+        elif es_grupo(node) and self._al_agregar is not None and not is_disabled(node):
+            self._al_agregar(node, False, False)

@@ -1,69 +1,36 @@
 from typing import Optional
 
 from qgis.PyQt.QtCore import Qt, pyqtSignal
-from qgis.PyQt.QtWidgets import (
-    QGraphicsDropShadowEffect,
-    QHBoxLayout,
-    QPushButton,
-    QWidget,
-)
+from qgis.PyQt.QtWidgets import QHBoxLayout, QPushButton, QWidget
 
 from ..config import MODO_IIEG, MODO_INEGI
-from ..theme import color_de_rol, set_role, sombra
+from ..theme import color_de_rol, set_role
 
-ALTO: int = 26
+ALTO: int = 30
 
 RADIO: int = ALTO // 2
 
-SOMBRA_BLUR: float = 10.0
+RELLENO: int = 2
 
-SOMBRA_AIRE: int = 6
+APAGADO: str = '#9AA7B8'
 
 ETIQUETAS: tuple[tuple[str, str], ...] = ((MODO_IIEG, 'IIEG'), (MODO_INEGI, 'INEGI'))
 
 
 def _reglas() -> str:
-    primario = color_de_rol('primary', 'background-color', '#5C2472')
-    sobre_primario = color_de_rol('primary', 'color', '#FFFFFF')
-    acento = color_de_rol('badge', 'background-color', '#FF8300')
-    sobre_acento = color_de_rol('badge', 'color', '#465055')
+    tinta = color_de_rol('search', 'color', '#5C2472')
     superficie = color_de_rol('search', 'background-color', '#EAEFFA')
 
     return (
-        f'QWidget[brandRole="switch"] {{ background-color: transparent; }}\n'
-        f'QWidget[brandRole="switch"] QPushButton {{\n'
-        f'    background-color: transparent;\n'
-        f'    color: palette(text);\n'
-        f'    border: 1px solid palette(mid);\n'
-        f'    padding: 0px 10px;\n'
-        f'    font-size: 12px;\n'
-        f'    font-weight: 600;\n'
-        f'}}\n'
-        f'QWidget[brandRole="switch"] QPushButton[posicion="izquierda"] {{\n'
-        f'    border-top-left-radius: {RADIO}px;\n'
-        f'    border-bottom-left-radius: {RADIO}px;\n'
-        f'    border-right: none;\n'
-        f'}}\n'
-        f'QWidget[brandRole="switch"] QPushButton[posicion="derecha"] {{\n'
-        f'    border-top-right-radius: {RADIO}px;\n'
-        f'    border-bottom-right-radius: {RADIO}px;\n'
-        f'}}\n'
-        f'QWidget[brandRole="switch"] QPushButton:hover {{\n'
-        f'    background-color: {superficie};\n'
-        f'}}\n'
-        f'QWidget[brandRole="switch"] QPushButton[modo="{MODO_IIEG}"]:checked {{\n'
-        f'    background-color: {primario};\n'
-        f'    color: {sobre_primario};\n'
-        f'    border: 1px solid {primario};\n'
-        f'}}\n'
-        f'QWidget[brandRole="switch"] QPushButton[modo="{MODO_INEGI}"]:checked {{\n'
-        f'    background-color: {acento};\n'
-        f'    color: {sobre_acento};\n'
-        f'    border: 1px solid {acento};\n'
-        f'}}\n'
-        f'QWidget[brandRole="switch"] QPushButton:disabled {{\n'
-        f'    color: palette(disabled-text);\n'
-        f'}}\n'
+        'QWidget[brandRole="switch"] { background-color: #FFFFFF;'
+        f' border-radius: {RADIO}px; }}\n'
+        'QWidget[brandRole="switch"] QPushButton { background-color: transparent;'
+        f' color: {APAGADO}; border: none; border-radius: {RADIO - RELLENO}px;'
+        ' padding: 0px 8px; font-size: 12px; font-weight: 700; }\n'
+        f'QWidget[brandRole="switch"] QPushButton:hover {{ color: {tinta}; }}\n'
+        'QWidget[brandRole="switch"] QPushButton:checked {'
+        f' background-color: {superficie}; color: {tinta}; }}\n'
+        'QWidget[brandRole="switch"] QPushButton:disabled { color: palette(disabled-text); }\n'
     )
 
 
@@ -81,26 +48,23 @@ class SwitchModoBase(QWidget):
         super().__init__(parent)
         self._modo: Optional[str] = None
         self._botones: dict[str, QPushButton] = {}
-        self._sombras: dict[str, QGraphicsDropShadowEffect] = {}
 
         layout = QHBoxLayout()
-        layout.setContentsMargins(SOMBRA_AIRE, SOMBRA_AIRE, SOMBRA_AIRE, SOMBRA_AIRE)
-        layout.setSpacing(0)
+        layout.setContentsMargins(RELLENO, RELLENO, RELLENO, RELLENO)
+        layout.setSpacing(2)
 
         for indice, (modo, etiqueta) in enumerate(ETIQUETAS):
             boton = QPushButton(etiqueta)
             boton.setCheckable(True)
-            boton.setFixedHeight(ALTO)
+            boton.setFixedHeight(ALTO - 2 * RELLENO)
             boton.setCursor(Qt.CursorShape.PointingHandCursor)
             boton.setProperty('modo', modo)
-            boton.setProperty('posicion', 'izquierda' if indice == 0 else 'derecha')
             boton.clicked.connect(lambda _, elegido=modo: self._al_pulsar(elegido))
             layout.addWidget(boton)
             self._botones[modo] = boton
-            self._sombras[modo] = sombra(boton, SOMBRA_BLUR)
 
         self.setLayout(layout)
-        self.setFixedHeight(ALTO + 2 * SOMBRA_AIRE)
+        self.setFixedHeight(ALTO)
         set_role(self, 'switch')
         self.setStyleSheet(_reglas())
         self.mostrar(None)
@@ -115,7 +79,6 @@ class SwitchModoBase(QWidget):
             activo = clave == modo
             boton.setChecked(activo)
             boton.setToolTip(_tooltip(etiqueta, activo, modo is not None))
-            self._sombras[clave].setEnabled(activo)
 
     def _al_pulsar(self, modo: str) -> None:
         if modo == self._modo:

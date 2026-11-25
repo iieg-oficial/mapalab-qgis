@@ -117,15 +117,21 @@ class DialogoCompartido(QDialog):
         self._al_terminar = al_terminar
         self._plan: Optional[Plan] = None
         self._construir()
-        set_role(self, 'panel')
+        set_role(self, 'mapa-tarjeta')
         apply_theme(self)
 
     def _construir(self) -> None:
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel('Enlace o código'))
+        layout.setContentsMargins(20, 18, 20, 18)
+        layout.setSpacing(12)
+        titulo = QLabel('Abrir mapa compartido')
+        set_role(titulo, 'mapa-titulo')
+        layout.addWidget(titulo)
         fila = QHBoxLayout()
+        fila.setSpacing(8)
         self._entrada = QLineEdit()
-        self._entrada.setPlaceholderText('https://…/mapalab/mapa?s=…')
+        self._entrada.setPlaceholderText('Enlace del visor (…/mapa?s=…) o su código')
+        set_role(self._entrada, 'search')
         self._entrada.returnPressed.connect(self._ver)
         ver = QPushButton('Ver')
         ver.clicked.connect(self._ver)
@@ -136,9 +142,11 @@ class DialogoCompartido(QDialog):
 
         self._resumen = QLabel('')
         self._resumen.setWordWrap(True)
+        set_role(self._resumen, 'mapa-aviso-texto')
         layout.addWidget(self._resumen)
         self._lista = QListWidget()
         self._lista.setVisible(False)
+        set_role(self._lista, 'compartido-lista')
         layout.addWidget(self._lista)
         self._base = QCheckBox('')
         self._notas = QCheckBox('')
