@@ -11,6 +11,88 @@ CHANGELOG de aquel repositorio, entre sus versiones 1.117.0 y 1.128.1.
 
 ---
 
+## [No publicado]
+
+## [0.19.0] - 2026-11-25
+
+### Agregado
+
+- **La capa elegida se despliega en la tarjeta del mapa**, como en el visor: un recuadro blanco con
+  el nombre, una fila de acciones (periodo en el borde izquierdo, leyendas, encuadrar y descargar;
+  el bote rojo para quitarla, a la derecha) y la leyenda en blanco. Encuadrar lleva el mapa a los
+  municipios filtrados de la capa, o a toda la capa si no tiene filtro, fuera de la franja que
+  ocupan las tarjetas; marcar municipios también respeta esa franja. Un grupo muestra la leyenda de cada capa con su nombre. Elegir una capa en el
+  catálogo también la despliega.
+- **Píldora de periodo**: cada capa con fechas muestra su año o mes junto al nombre; en la capa
+  elegida abre un menú con los años y sus meses, con la identidad del instituto y desplazable.
+- **Reordenar las capas** arrastrando desde el icono de mover. El orden se aplica al árbol de capas
+  de QGIS y la tarjeta sigue también los cambios hechos desde el panel de capas.
+- La tarjeta se **minimiza** a su título y vuelve con +. Junto a ese botón, el bote con el número de
+  capas las quita todas (con las selecciones de la consulta) tras confirmarlo.
+- **Tarjeta de municipio sobre el mapa**, encima de la de capas, cuando la capa elegida lo admite.
+  Minimizada, la tarjeta de capas toma su mismo ancho y alto.
+- El selector IIEG | INEGI pasa al título de la tarjeta de capas, junto al bote, con la identidad
+  del visor.
+- **Avisos dentro del mapa**: los mensajes del complemento (como «Sin elementos de MapaLab en ese
+  punto») salen abajo al centro del lienzo y se ocultan solos.
+- **Doble clic sobre un grupo** lo agrega completo; un clic lo abre o lo pliega.
+- El catálogo esconde su barra de desplazamiento y muestra un desvanecido con flecha en el borde que
+  tiene más contenido; la flecha lleva al inicio o al final.
+
+### Cambiado
+
+- Las tarjetas del mapa quedan pegadas a la derecha, blancas, con sombra suave y la misma separación
+  entre ellas que con el borde; la capa elegida y los campos van en el azul del buscador.
+- El panel queda solo con el buscador, a todo lo ancho, y el catálogo: recargar y abrir un mapa
+  compartido pasan a iconos en el título, y el diálogo lleva la identidad de las tarjetas.
+- El icono del complemento es el logo corto de MapaLab desde la instalación, sin esperar a que
+  baje el del servidor.
+
+### Eliminado
+
+- Del panel: la lista de capas seleccionadas, los filtros de municipio y fecha, la fila de botones
+  (*Agregar*, *Descargar*, *Limpiar*, *Abrir*) y la línea de estado. Todo vive ahora en el mapa o en
+  el doble clic.
+
+## [0.18.0] - 2026-11-24
+
+### Agregado
+
+- **Eventos vigentes** al inicio del catálogo, como un tema más con su icono, sus etiquetas,
+  categorías y capas (con el alias del evento). Solo aparecen mientras el visor los publica; los
+  eventos *lite*, que no traen capas, y los que no resuelven ninguna capa del catálogo no se
+  muestran. Sin conexión, el catálogo guardado se abre sin eventos.
+- **Capas seleccionadas**: las capas y grupos cargados quedan fijos arriba del árbol y en una
+  tarjeta sobre el mapa, con su contador, clic para ubicarlas en el catálogo y ✕ para quitarlas.
+  En el panel la tarjeta tiene el ancho del buscador y las ✕ quedan afuera, alineadas con recargar.
+- Marcar municipios (o ZMG) acerca el mapa a ellos; desmarcarlos vuelve a todo Jalisco.
+
+### Cambiado
+
+- Las cuatro acciones en una sola fila: **Agregar**, **Descargar**, **Limpiar** y **Abrir**, cada una
+  con su explicación en el tooltip; las dos primeras se llevan más ancho.
+- Municipio y fecha sin etiqueta, con la ayuda en el tooltip de cada control; sin municipio marcado
+  el filtro dice «Jalisco». Los desplegables llevan la identidad del instituto y sus listas se ven
+  como el menú: sin casillas, lo elegido en naranja y el resto con realce gris al pasar.
+- El escaneo de seguridad (`scripts/scan.sh`) corre sobre `python:3.15-slim`.
+
+### Corregido
+
+- El catálogo respeta los temas y capas ocultos del menú del visor (`hiddenInMenu`): ya no
+  aparecen Ortofotos ni el tema de eventos autocreado. Siguen disponibles para abrir mapas
+  compartidos.
+- La lista de años se cerraba al hacer clic: se abría encima del control y el clic elegía el año
+  actual. Ahora despliega hacia abajo, con doce opciones visibles.
+- Sin el aviso «No hay capas de selección en el proyecto» al limpiar.
+- El filtro por municipio no hacía nada en las capas cuyo campo declarado no existe en el servicio
+  (`clave_municipio` donde la capa publica `cvegeo_municipio`): ahora se usa el campo que la capa
+  sí tiene, en el orden `clave_municipio`, `clave_geo`, `cvegeo_municipio`, `municipio`, `nombre`.
+- La ✕ de la primera capa agregada no aparecía en el árbol hasta agregar otra.
+- Los temas con icono propio en el visor (como «Recursos y calidad de vida») salían sin icono.
+- Quitar un grupo, o cambiarle el filtro, borraba también todas las demás capas sueltas del
+  proyecto y dejaba el mapa en blanco.
+- Los grupos ya no llevan casilla: se agregan con **Agregar** y se quitan con la ✕, como las capas.
+
 ## [0.17.0] - 2026-10-16
 
 Listo para el repositorio oficial de complementos de QGIS. Probado en QGIS 3.40 y 4.0.

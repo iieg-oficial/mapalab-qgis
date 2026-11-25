@@ -106,6 +106,10 @@ def api_url(path: str) -> str:
     return f'{get_base_url()}/mapalab/api{path}'
 
 
+def eventos_url() -> str:
+    return f'{get_base_url()}/api/mapalab/eventos'
+
+
 def geoserver_url(workspace: str) -> str:
     return f'{get_base_url()}/sextante/{workspace}/wms'
 

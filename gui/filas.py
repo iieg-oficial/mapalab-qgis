@@ -1,8 +1,9 @@
 from typing import Any
 
-from qgis.PyQt.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
+from qgis.PyQt.QtCore import QSize, Qt
+from qgis.PyQt.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QToolButton, QWidget
 
-from ..theme import set_role, sombra_en_hover
+from ..theme import icono_asset, set_role
 
 PLACEHOLDER: str = 'https://dominio-del-iieg'
 
@@ -27,38 +28,29 @@ def fila_servidor(al_guardar: Any) -> tuple[QWidget, QLineEdit]:
     return fila, entrada
 
 
-def fila_acciones(al_agregar: Any, al_descargar: Any,
-                  texto_agregar: str) -> tuple[QHBoxLayout, QPushButton, QPushButton]:
-    fila = QHBoxLayout()
+AYUDA_COMPARTIDO: str = ('Abre un mapa compartido desde el visor: pega su enlace (…/mapa?s=…) y '
+                         'trae sus capas, filtros, vista y anotaciones.')
 
-    agregar = QPushButton(texto_agregar)
-    agregar.clicked.connect(al_agregar)
-    descargar = QPushButton('Descargar vectorial')
-    descargar.clicked.connect(al_descargar)
-
-    fila.addWidget(agregar)
-    fila.addWidget(descargar)
-
-    set_role(agregar, 'primary')
-    sombra_en_hover(agregar)
-    set_role(descargar, 'secondary')
-    return fila, agregar, descargar
+LADO_COMPARTIDO: int = 30
 
 
-def fila_limpieza(al_limpiar_seleccion: Any, al_abrir_compartido: Any) -> QHBoxLayout:
-    boton = QPushButton('Limpiar seleccionados')
-    boton.setToolTip('Quita las capas de selección que dejó la consulta por clic.')
-    boton.clicked.connect(al_limpiar_seleccion)
-    set_role(boton, 'quiet')
+def boton_compartido(al_abrir: Any) -> QToolButton:
+    boton = QToolButton()
+    boton.setIcon(icono_asset('compartido.svg', 'compartido-hover.svg'))
+    boton.setIconSize(QSize(LADO_COMPARTIDO, LADO_COMPARTIDO))
+    boton.setAutoRaise(True)
+    boton.setToolTip(AYUDA_COMPARTIDO)
+    boton.setCursor(Qt.CursorShape.PointingHandCursor)
+    boton.clicked.connect(al_abrir)
+    set_role(boton, 'mapa-accion')
+    return boton
 
-    compartido = QPushButton('Abrir compartido')
-    compartido.setToolTip('Trae al proyecto un mapa compartido desde el visor.')
-    compartido.clicked.connect(al_abrir_compartido)
-    set_role(compartido, 'quiet')
 
-    fila = QHBoxLayout()
-    fila.addStretch(1)
-    fila.addWidget(boton)
-    fila.addWidget(compartido)
-    fila.addStretch(1)
-    return fila
+def acciones_titulo(*botones: QWidget) -> QWidget:
+    caja = QWidget()
+    layout = QHBoxLayout(caja)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(4)
+    for boton in botones:
+        layout.addWidget(boton, 0, Qt.AlignmentFlag.AlignVCenter)
+    return caja

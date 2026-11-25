@@ -74,6 +74,22 @@ def campo_municipio(node: dict[str, Any]) -> tuple[str, str]:
     return str(meta.get('municipioField') or ''), str(meta.get('municipioFieldType') or '')
 
 
+CAMPOS_CLAVE: tuple[str, ...] = ('clave_municipio', 'clave_geo', 'cvegeo_municipio')
+
+CAMPOS_NOMBRE: tuple[str, ...] = ('municipio', 'nombre')
+
+
+def resolver_campo(node: dict[str, Any], campos: set[str]) -> None:
+    meta = node.get('searchMeta')
+    if not campos or not isinstance(meta, dict) or meta.get('municipioField') in campos:
+        return
+    for candidatos, tipo in ((CAMPOS_CLAVE, 'clave'), (CAMPOS_NOMBRE, TIPO_NOMBRE)):
+        encontrado = next((campo for campo in candidatos if campo in campos), None)
+        if encontrado:
+            meta['municipioField'], meta['municipioFieldType'] = encontrado, tipo
+            return
+
+
 def cql_municipio(node: dict[str, Any], claves: list[str],
                   catalogo: list[dict[str, Any]]) -> str:
     campo, tipo = campo_municipio(node)

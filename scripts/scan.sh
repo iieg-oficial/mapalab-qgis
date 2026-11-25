@@ -3,7 +3,7 @@ set -e
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ZIP="$REPO_ROOT/dist/mapalab-qgis.zip"
-IMAGEN="${SCAN_IMAGE:-python:3.12-slim}"
+IMAGEN="${SCAN_IMAGE:-python:3.15-slim}"
 [ -f "$ZIP" ] || { echo "Falta $ZIP: corre make zip." >&2; exit 1; }
 
 TMP=$(mktemp -d)

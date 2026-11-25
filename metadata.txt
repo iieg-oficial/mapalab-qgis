@@ -3,7 +3,7 @@ name=MapaLab
 qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
 description=Browse and add the geospatial layer catalog of the IIEG Jalisco (MapaLab) in QGIS
-version=0.17.0
+version=0.19.0
 author=Instituto de Información Estadística y Geográfica de Jalisco
 email=contacto@iieg.gob.mx
 
@@ -30,6 +30,12 @@ tags=web,wms,wfs,catalog,catalogo,geopackage,mexico,jalisco,iieg,mapalab,inegi,o
 category=Web
 icon=icon.svg
 changelog=
+    0.19.0 Map cards on the right: the municipality filter, and the selected layers with their
+    actions, legend, period, zoom and download, and the boundary switch. Drag to reorder, double click a group to add it,
+    messages shown on the map. The panel keeps only the search and the catalog.
+    0.18.0 Active events of the web viewer at the top of the catalog. Hidden layers stay hidden.
+    Loaded layers listed in the panel and on the map. Zoom to the selected municipalities. Actions in
+    one row, branded dropdowns, and fixes to the municipality filter and to removing groups.
     0.17.0 QGIS 4 support (Qt 6). English description and documentation. Security scan clean.
     0.16.0 Filter by municipality and date, applied live to loaded layers, to click queries and to
     downloads. Open maps shared from the web viewer with their layers, filters, view and notes.

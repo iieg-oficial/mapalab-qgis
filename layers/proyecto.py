@@ -1,6 +1,6 @@
 from typing import Optional
 
-from qgis.core import QgsMapLayer, QgsProject
+from qgis.core import QgsLayerTree, QgsMapLayer, QgsProject
 
 from ..config import NODE_ID_PROPERTY
 
@@ -49,7 +49,7 @@ def es_del_plugin(capa: QgsMapLayer) -> bool:
 def quitar_grupos_vacios() -> None:
     raiz = QgsProject.instance().layerTreeRoot()
     for nodo in list(raiz.children()):
-        if hasattr(nodo, 'children') and not nodo.children() and nodo.name():
+        if QgsLayerTree.isGroup(nodo) and not nodo.children() and nodo.name():
             raiz.removeChildNode(nodo)
 
 

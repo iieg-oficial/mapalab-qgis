@@ -30,14 +30,16 @@ The interface is in Spanish, like the catalog.
 | To | Do |
 |---|---|
 | Find a layer | Type in the search box; it ignores accents |
-| See a layer | Select it and *Agregar al mapa*, or double click. It loads as tiled WMS with the filter the catalog declares |
-| See a whole group | Tick the group's checkbox. Nodes from the same table load as one layer with their filters combined |
+| See a layer | Double click it, or right click → *Agregar al mapa*. It loads as tiled WMS with the filter the catalog declares |
+| See a whole group | Double click the group, or right click → *Agregar el grupo completo*. Nodes from the same table load as one layer with their filters combined |
 | Get the whole table | Right click → *Traer la tabla completa*: skips the catalog filter |
-| Analyze the data | *Descargar vectorial* saves a GeoPackage with the current filters. It never overwrites a file: a second download is saved as `_2` |
-| Filter by municipality or date | The rows under the tree, when the layer supports them. The date starts on the same period the web viewer shows; changing a filter updates the loaded layer |
+| Analyze the data | The download icon on the selected layer of the map card, or right click → *Descargar vectorial*, saves a GeoPackage with the current filters. It never overwrites a file: a second download is saved as `_2` |
+| Filter by municipality | The card on top of the map, when the selected layer supports it; changing it updates the loaded layer |
+| Change the year or month | Click the layer on the map card: it expands with its legend and a period pill before the name. The date starts on the same period the web viewer shows |
+| Reorder the layers | Drag the move icon on the map card; QGIS's layer tree follows. The − button minimizes the card and the trash can with the counter removes every layer |
 | Inspect a feature | With the panel open, click the map. The feature is copied to a *Selección — <layer>* memory layer and its attribute form opens |
-| Switch boundaries | The IIEG \| INEGI switch on the panel title: swaps the boundary layers and the geometry everything is drawn with |
-| Open a shared map | Web → MapaLab → *Abrir mapa compartido…*, or *Abrir compartido* in the panel |
+| Switch boundaries | The IIEG \| INEGI switch on the title of the map card: swaps the boundary layers and the geometry everything is drawn with |
+| Open a shared map | Web → MapaLab → *Abrir mapa compartido…*, or the paper plane icon on the panel title |
 
 ### Click to inspect
 
