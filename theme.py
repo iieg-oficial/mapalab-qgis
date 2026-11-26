@@ -3,7 +3,7 @@ import re
 from functools import lru_cache
 from typing import Optional
 
-from qgis.PyQt.QtCore import QEvent, QObject, Qt
+from qgis.PyQt.QtCore import QEvent, QObject, QSize, Qt
 from qgis.PyQt.QtGui import QColor, QIcon
 from qgis.PyQt.QtWidgets import QGraphicsDropShadowEffect, QWidget
 
@@ -43,12 +43,12 @@ SHADOW_OFFSET: float = 2.0
 SHADOW_ALPHA: int = 90
 
 
-def sombra(widget: QWidget, blur: float = SHADOW_BLUR,
-           offset: float = SHADOW_OFFSET) -> QGraphicsDropShadowEffect:
+def sombra(widget: QWidget, blur: float = SHADOW_BLUR, offset: float = SHADOW_OFFSET,
+           color: Optional[QColor] = None) -> QGraphicsDropShadowEffect:
     efecto = QGraphicsDropShadowEffect(widget)
     efecto.setBlurRadius(blur)
     efecto.setOffset(0, offset)
-    efecto.setColor(QColor(0, 0, 0, SHADOW_ALPHA))
+    efecto.setColor(color or QColor(0, 0, 0, SHADOW_ALPHA))
     efecto.setEnabled(False)
     widget.setGraphicsEffect(efecto)
     return efecto
@@ -71,6 +71,14 @@ class _SombraEnHover(QObject):
 
 def sombra_en_hover(widget: QWidget) -> None:
     _SombraEnHover(widget)
+
+
+def icono_asset(normal: str, hover: Optional[str] = None) -> QIcon:
+    carpeta = os.path.join(os.path.dirname(__file__), ASSETS_DIR)
+    icono = QIcon(os.path.join(carpeta, normal))
+    if hover:
+        icono.addFile(os.path.join(carpeta, hover), QSize(), QIcon.Mode.Active)
+    return icono
 
 
 def icono_refrescar() -> QIcon:
@@ -116,7 +124,7 @@ def color_de_rol(rol: str, propiedad: str, respaldo: str) -> str:
 
 FLECHA_ICON: str = 'flecha.svg'
 
-FONDO_TARJETA: str = '#F3F4F5'
+FONDO_TARJETA: str = '#FFFFFF'
 
 
 def _ruta_asset(archivo: str) -> str:
@@ -129,9 +137,10 @@ def _reglas_combo() -> str:
     acento = color_de_rol('primary', 'background-color', '#5C2472')
     realce = color_de_selector('QTreeView::item:selected', 'background-color', '#FFE9CC')
     realce_tinta = color_de_selector('QTreeView::item:selected', 'color', '#A85700')
+    gris = color_de_rol('quiet', 'color', '#465055')
     return (
         f'QComboBox {{ background-color: {fondo}; color: {tinta}; border: 1px solid {fondo};'
-        ' border-radius: 16px; padding: 6px 12px; combobox-popup: 0; }\n'
+        ' border-radius: 16px; padding: 11px 12px; combobox-popup: 0; }\n'
         f'QComboBox:hover, QComboBox:focus, QComboBox:on {{ border: 1px solid {acento}; }}\n'
         'QComboBox:disabled { color: palette(disabled-text); }\n'
         'QComboBox::drop-down { border: none; width: 28px;'
@@ -142,32 +151,79 @@ def _reglas_combo() -> str:
         f' border: 1px solid {fondo}; border-radius: 8px; padding: 4px; outline: none;'
         f' selection-background-color: {realce}; selection-color: {realce_tinta}; }}\n'
         'QComboBox QAbstractItemView::item { padding: 6px 8px; min-height: 22px; }\n'
+        f'QMenu {{ background-color: #FFFFFF; color: {gris}; border: 1px solid {fondo};'
+        ' border-radius: 8px; padding: 4px; menu-scrollable: 1; }\n'
+        'QMenu::item { padding: 7px 24px 7px 12px; margin: 1px 0px; border-radius: 4px;'
+        ' background: transparent; }\n'
+        'QMenu::item:selected { background-color: rgba(70, 80, 85, 20); }\n'
+        f'QMenu::item:checked {{ background-color: {realce}; color: {realce_tinta}; }}\n'
+        'QMenu::indicator { width: 0px; height: 0px; }\n'
+        f'QMenu::separator {{ height: 1px; background: {fondo}; margin: 4px 6px; }}\n'
     )
 
 
 def _reglas_en_mapa() -> str:
     tinta = color_de_rol('search', 'color', '#5C2472')
     gris = color_de_rol('quiet', 'color', '#465055')
+    fondo = color_de_rol('search', 'background-color', '#EAEFFA')
     radio = _color(_bloque_de_rol('search'), 'border-radius', '16px')
     tarjeta = f'background-color: {FONDO_TARJETA}; border: none; border-radius: {radio};'
-    quitar = f'color: {gris}; border: none; background: transparent; font-size: 13px;'
     return (
         f'QWidget[brandRole="mapa-tarjeta"] {{ {tarjeta} }}\n'
-        f'QWidget[brandRole="mapa-fondo"] {{ {tarjeta} }}\n'
         'QWidget[brandRole="mapa-lista"] { background: transparent; border: none; }\n'
         f'QLabel[brandRole="mapa-contador"] {{ background-color: {tinta}; color: #FFFFFF;'
-        ' border-radius: 9px; padding: 0px 7px; font-size: 12px; font-weight: 700;'
-        ' min-height: 18px; max-height: 18px; }\n'
-        f'QLabel[brandRole="mapa-titulo"] {{ color: {tinta}; font-size: 13px;'
-        ' font-weight: 700; padding: 0px 4px; border: none; background: transparent; }\n'
+        ' border-radius: 9px; padding: 0px; font-size: 11px; font-weight: 700; }\n'
+        f'QLabel[brandRole="mapa-titulo"] {{ color: {tinta}; font-size: 15px;'
+        ' font-weight: 700; padding: 0px 2px; border: none; background: transparent; }\n'
         f'QPushButton[brandRole="mapa-capa"] {{ text-align: left; color: {gris}; border: none;'
-        ' background: transparent; padding: 4px 6px; font-size: 14px; }\n'
-        f'QPushButton[brandRole="mapa-capa"]:hover {{ color: {tinta}; background-color: #FFFFFF;'
+        ' background: transparent; padding: 4px 6px; font-size: 16px; }\n'
+        f'QPushButton[brandRole="mapa-capa"]:hover {{ color: {tinta}; background-color: {fondo};'
         ' border-radius: 8px; }\n'
-        f'QPushButton[brandRole="mapa-quitar"] {{ {quitar} padding: 2px 6px; }}\n'
-        f'QPushButton[brandRole="mapa-quitar-fuera"] {{ {quitar} padding: 0px; }}\n'
-        'QPushButton[brandRole="mapa-quitar"]:hover,'
-        f' QPushButton[brandRole="mapa-quitar-fuera"]:hover {{ color: {tinta}; }}\n'
+        f'QPushButton[brandRole="mapa-minimizar"] {{ color: {tinta}; border: none;'
+        ' background: transparent; font-size: 26px; font-weight: 700; padding: 0px;'
+        ' min-width: 32px; max-width: 32px; min-height: 32px; max-height: 32px;'
+        ' border-radius: 16px; }\n'
+        f'QPushButton[brandRole="mapa-minimizar"]:hover {{ background-color: {fondo}; }}\n'
+        f'QPushButton[brandRole="mapa-fecha"] {{ color: {tinta}; background-color: #FFFFFF;'
+        f' border: 1px solid {tinta}; border-radius: 12px; padding: 2px 10px;'
+        ' font-size: 13px; font-weight: 700; min-height: 18px; }\n'
+        'QPushButton[brandRole="mapa-fecha"]::menu-indicator { image: none; width: 0px; }\n'
+        f'QPushButton[brandRole="mapa-fecha-lectura"] {{ color: {tinta}; background-color:'
+        f' {fondo}; border: none; border-radius: 11px; padding: 2px 9px; font-size: 12px;'
+        ' font-weight: 700; }\n'
+        f'QPushButton[brandRole="mapa-fecha-lectura"]:hover {{ border: 1px solid {tinta}; }}\n'
+        'QToolButton[brandRole="mapa-accion"] { border: none; background: transparent;'
+        ' padding: 2px; border-radius: 6px; }\n'
+        'QToolButton[brandRole="mapa-accion"]:hover { background-color: rgba(92, 36, 114, 20); }\n'
+        'QToolButton[brandRole="mapa-accion"]::menu-indicator { image: none; width: 0px; }\n'
+        f'QListWidget[brandRole="compartido-lista"] {{ background-color: #FFFFFF; color: {gris};'
+        ' border: none; border-radius: 13px; padding: 6px; }\n'
+        'QListWidget[brandRole="compartido-lista"]::item { padding: 4px 6px; }\n'
+        f'QCheckBox {{ color: {gris}; }}\n'
+        'QWidget[brandRole="mapa-aviso"] { background-color: #FFFFFF; border: none;'
+        ' border-radius: 16px; }\n'
+        f'QLabel[brandRole="mapa-aviso-texto"] {{ color: {gris}; background: transparent;'
+        ' border: none; font-size: 14px; }\n'
+        'QToolButton[brandRole="borde-scroll"] { background-color: #FFFFFF;'
+        ' border: 1px solid transparent; border-radius: 11px; }\n'
+        f'QToolButton[brandRole="borde-scroll"]:hover {{ border: 1px solid {tinta}; }}\n'
+        'QPushButton[brandRole="mapa-fecha"]:hover { background-color: #F7F0FA; }\n'
+        f'QPushButton[brandRole="mapa-capa-activa"] {{ text-align: left; color: {tinta};'
+        ' border: none; background: transparent; padding: 4px 6px;'
+        ' font-size: 16px; font-weight: 700; }\n'
+        f'QLabel[brandRole="mapa-asa"] {{ color: {gris}; background: transparent; border: none;'
+        ' font-size: 15px; padding: 0px 2px; }\n'
+        f'QLabel[brandRole="mapa-asa"]:hover {{ color: {tinta}; }}\n'
+        f'QFrame[brandRole="mapa-guia"] {{ background-color: {tinta}; border: none;'
+        ' border-radius: 1px; }\n'
+        'QWidget[brandRole="mapa-leyenda"] { background-color: #FFFFFF; border: none;'
+        ' border-radius: 13px; }\n'
+        f'QWidget[brandRole="mapa-item-abierto"] {{ background-color: {fondo}; border: none;'
+        ' border-radius: 13px; }\n'
+        f'QLabel[brandRole="mapa-leyenda-texto"] {{ color: {gris}; background: transparent;'
+        ' border: none; font-size: 14px; }\n'
+        f'QLabel[brandRole="mapa-leyenda-subtitulo"] {{ color: {tinta}; background: transparent;'
+        ' border: none; font-size: 14px; font-weight: 700; }\n'
     )
 
 

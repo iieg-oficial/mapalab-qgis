@@ -13,6 +13,47 @@ CHANGELOG de aquel repositorio, entre sus versiones 1.117.0 y 1.128.1.
 
 ## [No publicado]
 
+## [0.19.0] - 2026-11-25
+
+### Agregado
+
+- **La capa elegida se despliega en la tarjeta del mapa**, como en el visor: un recuadro blanco con
+  el nombre, una fila de acciones (periodo en el borde izquierdo, leyendas, encuadrar y descargar;
+  el bote rojo para quitarla, a la derecha) y la leyenda en blanco. Encuadrar lleva el mapa a los
+  municipios filtrados de la capa, o a toda la capa si no tiene filtro, fuera de la franja que
+  ocupan las tarjetas; marcar municipios también respeta esa franja. Un grupo muestra la leyenda de cada capa con su nombre. Elegir una capa en el
+  catálogo también la despliega.
+- **Píldora de periodo**: cada capa con fechas muestra su año o mes junto al nombre; en la capa
+  elegida abre un menú con los años y sus meses, con la identidad del instituto y desplazable.
+- **Reordenar las capas** arrastrando desde el icono de mover. El orden se aplica al árbol de capas
+  de QGIS y la tarjeta sigue también los cambios hechos desde el panel de capas.
+- La tarjeta se **minimiza** a su título y vuelve con +. Junto a ese botón, el bote con el número de
+  capas las quita todas (con las selecciones de la consulta) tras confirmarlo.
+- **Tarjeta de municipio sobre el mapa**, encima de la de capas, cuando la capa elegida lo admite.
+  Minimizada, la tarjeta de capas toma su mismo ancho y alto.
+- El selector IIEG | INEGI pasa al título de la tarjeta de capas, junto al bote, con la identidad
+  del visor.
+- **Avisos dentro del mapa**: los mensajes del complemento (como «Sin elementos de MapaLab en ese
+  punto») salen abajo al centro del lienzo y se ocultan solos.
+- **Doble clic sobre un grupo** lo agrega completo; un clic lo abre o lo pliega.
+- El catálogo esconde su barra de desplazamiento y muestra un desvanecido con flecha en el borde que
+  tiene más contenido; la flecha lleva al inicio o al final.
+
+### Cambiado
+
+- Las tarjetas del mapa quedan pegadas a la derecha, blancas, con sombra suave y la misma separación
+  entre ellas que con el borde; la capa elegida y los campos van en el azul del buscador.
+- El panel queda solo con el buscador, a todo lo ancho, y el catálogo: recargar y abrir un mapa
+  compartido pasan a iconos en el título, y el diálogo lleva la identidad de las tarjetas.
+- El icono del complemento es el logo corto de MapaLab desde la instalación, sin esperar a que
+  baje el del servidor.
+
+### Eliminado
+
+- Del panel: la lista de capas seleccionadas, los filtros de municipio y fecha, la fila de botones
+  (*Agregar*, *Descargar*, *Limpiar*, *Abrir*) y la línea de estado. Todo vive ahora en el mapa o en
+  el doble clic.
+
 ## [0.18.0] - 2026-11-24
 
 ### Agregado
