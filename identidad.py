@@ -2,6 +2,8 @@ import json
 import os
 from typing import Any, Optional
 
+from qgis.PyQt.QtGui import QIcon
+
 from .almacen import carpeta, escribir_atomico
 from .config import (
     ICONO_ARCHIVO,
@@ -9,7 +11,6 @@ from .config import (
     ICONOS_PATH,
     LOGOS,
     LOGOS_PATH,
-    REFRESH_ARCHIVO,
     TEMAS_PATH,
     get_base_url,
 )
@@ -70,15 +71,6 @@ def tema_override_url(node: dict[str, Any], hover: bool = False) -> str:
     return f'{get_base_url()}{ruta}' if ruta.startswith('/') else ruta
 
 
-def refrescar_urls() -> list[str]:
-    base = get_base_url()
-    propio = f'{base}{ICONOS_PATH}/{REFRESH_ARCHIVO}' if base else ''
-    catalogo = _url_catalogo('iieg', False)
-    raiz = catalogo.split('/acervo/')[0] if '/acervo/' in catalogo else ''
-    respaldo = f'{raiz}{ICONOS_PATH}/{REFRESH_ARCHIVO}' if raiz else ''
-    return [propio, respaldo]
-
-
 def icono_cache_path() -> str:
     return os.path.join(carpeta(), ICONO_CACHE)
 
@@ -86,6 +78,11 @@ def icono_cache_path() -> str:
 def icono_guardado() -> Optional[str]:
     path = icono_cache_path()
     return path if os.path.exists(path) else None
+
+
+def icono_plugin() -> QIcon:
+    ruta = icono_guardado() or os.path.join(os.path.dirname(__file__), 'icon.svg')
+    return QIcon(ruta) if os.path.exists(ruta) else QIcon()
 
 
 def guardar_icono(datos: bytes) -> None:

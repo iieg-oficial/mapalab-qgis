@@ -2,6 +2,7 @@ from typing import Any, Callable, Optional
 
 from qgis.core import QgsProject
 from qgis.PyQt.QtCore import QTimer
+from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QWidget
 
 from ..layers.grupos import quitar_grupo
@@ -9,6 +10,7 @@ from ..layers.orden import encuadrar_fila, mover_fila, municipios_de_fila
 from ..layers.zoom import acercar_a_municipios
 from ..layers.proyecto import limpiar_selecciones
 from ..model.tree import find_node, has_wfs, is_downloadable
+from .boton_icono import LADO_BOTON, BotonIcono
 from .leyenda import Leyendas
 from .lista_mapa import ANCHO_TARJETA, Fila, capas_en_mapa
 from .sobre_mapa import MARGEN, Apilado, AvisoMapa, montar_tarjeta
@@ -30,6 +32,7 @@ class EnMapa:
         self._quitar_nodo = quitar_nodo
         self._filas: list[Fila] = []
         self._tarjeta: Optional[TarjetaEnMapa] = None
+        self._botones: list[BotonIcono] = []
         canvas = iface.mapCanvas() if iface is not None else None
         self._canvas = canvas
         self._espera = QTimer(canvas)
@@ -43,6 +46,7 @@ class EnMapa:
             for tarjeta in (self._filtros_mapa, self._tarjeta):
                 montar_tarjeta(tarjeta)
                 self._apilado.agregar(tarjeta)
+                self._apilado.agregar(tarjeta.boton)
             self._aviso = AvisoMapa(canvas)
             filtros.al_mostrar = self.refrescar
         self._raiz = QgsProject.instance().layerTreeRoot()
@@ -64,9 +68,6 @@ class EnMapa:
         if self._tarjeta is not None:
             self._apilado.acomodar()
 
-    def alto_compacto(self) -> int:
-        return self._filtros_mapa.alto_compacto if self._filtros_mapa is not None else 0
-
     def encuadrar(self, clave: str) -> None:
         if self._canvas is None:
             return
@@ -76,8 +77,22 @@ class EnMapa:
         else:
             encuadrar_fila(self._canvas, clave, self.ocupado())
 
+    def crear_boton(self, icono: QIcon, ayuda: str,
+                    al_clic: Callable[[], Any]) -> Optional[BotonIcono]:
+        if self._canvas is None:
+            return None
+        boton = BotonIcono(icono, ayuda, al_clic, self._canvas)
+        self._botones.append(boton)
+        self._apilado.agregar(boton, primero=True)
+        return boton
+
     def ocupado(self) -> int:
-        return ANCHO_TARJETA + 2 * MARGEN if self._tarjeta is not None else 0
+        if self._tarjeta is None or self._filtros_mapa is None:
+            return 0
+        if not (self._tarjeta.isHidden() and self._filtros_mapa.isHidden()):
+            return ANCHO_TARJETA + 2 * MARGEN
+        botones = [self._tarjeta.boton, self._filtros_mapa.boton, *self._botones]
+        return LADO_BOTON + 2 * MARGEN if any(not b.isHidden() for b in botones) else 0
 
     def avisar(self, texto: str) -> None:
         if self._aviso is not None:
@@ -125,7 +140,8 @@ class EnMapa:
                 senal.disconnect(self._al_cambiar_arbol)
             except TypeError:
                 pass
-        for widget in (self._tarjeta, self._filtros_mapa, self._aviso):
+        for widget in (self._tarjeta, self._filtros_mapa, self._aviso, *self._botones):
             if widget is not None:
                 widget.deleteLater()
         self._tarjeta = self._filtros_mapa = self._aviso = None
+        self._botones = []

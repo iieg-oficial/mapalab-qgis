@@ -1,13 +1,10 @@
 from typing import Any, Callable, Optional
 
-from qgis.gui import QgsCheckableComboBox
-from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtWidgets import QComboBox, QGridLayout, QPushButton, QSizePolicy, QWidget
+from qgis.PyQt.QtWidgets import QComboBox, QGridLayout, QSizePolicy, QWidget
 
 from ..api.client import MapaLabClient
 from ..layers.filtros import (
     MESES,
-    ZMG,
     Filtro,
     anios_y_meses,
     campo_municipio,
@@ -23,24 +20,14 @@ from ..layers.proyecto import capa_por_nodo
 from ..periodicidad import PeriodicidadTask
 from .menu_combo import como_menu
 from .pildora_fecha import etiqueta
+from .selector_municipios import SelectorMunicipios
 from ..tasks import Coordinador
-from ..theme import set_role
-
-AYUDA_MUNICIPIO: str = ('Municipio: filtra la capa elegida y acerca el mapa a lo marcado. Sin '
-                        'marcar ninguno se ve todo Jalisco; marca uno o varios para ver solo '
-                        'esos. El filtro se aplica al mapa, a la consulta por clic y a la '
-                        'descarga en GeoPackage.')
-
-AYUDA_ZMG: str = ('Marca de un clic los municipios de la Zona Metropolitana de Guadalajara. '
-                  'Otro clic los desmarca.')
 
 AYUDA_ANIO: str = ('Año que se dibuja. Arranca en el mismo periodo que usa el visor; «Todas» '
                    'quita el filtro y dibuja todos los periodos encimados. Se aplica al mapa, a '
                    'la consulta por clic y a la descarga.')
 
 AYUDA_MES: str = 'Mes del año elegido; «Todo el año» junta los doce meses.'
-
-TEXTO_TODOS: str = 'Jalisco'
 
 VISIBLES: int = 12
 
@@ -75,33 +62,26 @@ class ControlFiltros:
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setHorizontalSpacing(8)
 
-        self._municipios = QgsCheckableComboBox()
-        self._municipios.setDefaultText(TEXTO_TODOS)
-        self._municipios.checkedItemsChanged.connect(lambda _: self._cambio())
-        self._zmg = QPushButton('ZMG')
-        self._zmg.clicked.connect(self._marcar_zmg)
-        self._zmg.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        set_role(self._zmg, 'secondary')
+        self._municipios = SelectorMunicipios(self._cambio)
 
         self._anio = QComboBox()
         self._anio.currentIndexChanged.connect(self._cambio_anio)
         self._mes = QComboBox()
         self._mes.currentIndexChanged.connect(lambda _: self._cambio())
 
-        for widget, ayuda in ((self._municipios, AYUDA_MUNICIPIO), (self._zmg, AYUDA_ZMG),
-                              (self._anio, AYUDA_ANIO), (self._mes, AYUDA_MES)):
+        for widget, ayuda in ((self._anio, AYUDA_ANIO), (self._mes, AYUDA_MES)):
             widget.setToolTip(ayuda)
-        for combo in (self._municipios, self._anio, self._mes):
+        for combo in (self._anio, self._mes):
             combo.setMaxVisibleItems(VISIBLES)
             como_menu(combo)
 
-        grid.addWidget(self._municipios, 0, 0)
-        grid.addWidget(self._zmg, 0, 1)
+        grid.addWidget(self._municipios.combo, 0, 0)
+        grid.addWidget(self._municipios.limpiar, 0, 1)
         grid.setColumnStretch(0, 1)
         return caja
 
     def _fila_municipio(self, visible: bool) -> None:
-        for widget in (self._municipios, self._zmg):
+        for widget in (self._municipios.combo, self._municipios.limpiar):
             widget.setVisible(visible)
 
     def _fila_fecha(self, visible: bool) -> None:
@@ -139,13 +119,7 @@ class ControlFiltros:
             self.al_mostrar()
 
     def cargar_municipios(self) -> None:
-        self._silencio = True
-        self._municipios.clear()
-        for municipio in sorted(self._client.municipios, key=lambda m: str(m.get('nombre'))):
-            self._municipios.addItemWithCheckState(
-                str(municipio.get('nombre') or ''), Qt.CheckState.Unchecked,
-                str(municipio.get('clave')))
-        self._silencio = False
+        self._municipios.cargar(self._client.municipios)
 
     def olvidar(self) -> None:
         self._periodos.clear()
@@ -226,11 +200,8 @@ class ControlFiltros:
         filtro = actual or (self._por_defecto(self._node) if hoja else Filtro())
         self._silencio = True
         campo = any(campo_municipio(h)[0] for h in hojas_de(self._node))
-        self._fila_municipio(campo and self._municipios.count() > 0)
-        for indice in range(self._municipios.count()):
-            marcado = self._municipios.itemData(indice) in filtro.municipios
-            estado = Qt.CheckState.Checked if marcado else Qt.CheckState.Unchecked
-            self._municipios.setItemCheckState(indice, estado)
+        self._fila_municipio(campo and self._municipios.hay())
+        self._municipios.fijar(filtro.municipios)
         self._ultimos = sorted(filtro.municipios)
 
         disponibles = periodos[0] if periodos else {}
@@ -262,20 +233,8 @@ class ControlFiltros:
         self._silencio = False
         self._cambio()
 
-    def _marcar_zmg(self) -> None:
-        elegidos = set(self._municipios.checkedItemsData())
-        marcar = not set(ZMG) <= elegidos
-        self._silencio = True
-        for indice in range(self._municipios.count()):
-            if self._municipios.itemData(indice) in ZMG:
-                self._municipios.setItemCheckState(
-                    indice, Qt.CheckState.Checked if marcar else Qt.CheckState.Unchecked)
-        self._silencio = False
-        self._cambio()
-
     def filtro(self) -> Filtro:
-        municipios = ([str(dato) for dato in self._municipios.checkedItemsData()]
-                      if not self._municipios.isHidden() else [])
+        municipios = self._municipios.marcados() if not self._municipios.combo.isHidden() else []
         return Filtro(municipios, self._anio.currentData(), self._mes.currentData())
 
     def parametros_de(self, node: dict[str, Any]) -> Parametros:

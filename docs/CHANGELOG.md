@@ -13,6 +13,39 @@ CHANGELOG de aquel repositorio, entre sus versiones 1.117.0 y 1.128.1.
 
 ## [No publicado]
 
+## [0.19.2] - 2026-11-27
+
+### Cambiado
+
+- El título de la tarjeta de capas seleccionadas va en negro; el del modal sigue en morado.
+
+## [0.19.1] - 2026-11-26
+
+### Agregado
+
+- **Modo icono**: las tarjetas de municipio y de capas y el panel del catálogo se minimizan a un
+  botón redondo sobre el mapa, con su icono, y vuelven con un clic. El botón de minimizar está junto
+  al bote, al selector o en el título del panel. Los botones se apilan a la derecha con el mismo
+  espacio que las tarjetas y el zoom a municipios descuenta solo lo que ocupan.
+- **Carga del catálogo**: mientras baja la lista, el panel muestra el logo de MapaLab con un
+  indicador giratorio en la identidad del instituto y «Cargando catálogo…».
+- El bote de la tarjeta de municipio lleva el número de selecciones: cada municipio suma 1, y una
+  región, la ZMG o todo Jalisco marcado suman 1 en conjunto.
+
+### Cambiado
+
+- El botón *ZMG* pasa al menú de municipio, que ahora trae tres secciones: **General** (Jalisco
+  completo, sin filtro, y la Zona Metropolitana con los municipios que incluye), **Regiones** (cada
+  una suma o quita sus municipios) y **Municipios**.
+- *Limpiar* deja de ser un botón con borde y pasa a ser el bote rojo de las tarjetas.
+- Las acciones del título del panel, las de la tarjeta de municipio y las de la tarjeta de capas
+  comparten tamaño, fondo y separación.
+- Los iconos de acción se homologan: mismo trazo morado, sin fondo, del mismo tamaño y centrados
+  (minimizar, recargar, compartir, leyendas, encuadrar, descargar y mover); el bote sigue en rojo.
+  El de recargar ya no baja del servidor con su naranja.
+- El minimizar de la tarjeta de capas (que la dejaba solo en su título) se retira: lo sustituye el
+  modo icono.
+
 ## [0.19.0] - 2026-11-25
 
 ### Agregado

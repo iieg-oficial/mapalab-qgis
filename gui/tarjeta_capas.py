@@ -3,8 +3,9 @@ from typing import Any, Optional
 from qgis.PyQt.QtCore import QTimer
 from qgis.PyQt.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 
-from ..theme import set_role
+from ..theme import icono_asset, set_role
 from .arrastre import Arrastre, crear_asa
+from .boton_icono import BotonIcono
 from .leyenda import Leyendas
 from .lista_mapa import (
     ANCHO_TARJETA,
@@ -12,6 +13,7 @@ from .lista_mapa import (
     Fila,
     Nombre,
     accion,
+    bote,
     encabezado,
     vaciar,
 )
@@ -28,13 +30,15 @@ class TarjetaEnMapa(QWidget):
         self._leyendas = leyendas
         self._filtros = filtros
         self.abierta: Optional[str] = None
-        self._minimizada = False
+        self._icono = False
         self._con_leyenda = True
         self._filas: list[Fila] = []
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(12, 10, 8, 10)
         self._layout.setSpacing(2)
         self._arrastre = Arrastre(self, control.mover)
+        self.boton = BotonIcono(icono_asset('capas.svg'), 'Capas seleccionadas',
+                                self._alternar_icono, parent)
         set_role(self, 'mapa-tarjeta')
         self.setVisible(False)
 
@@ -46,8 +50,8 @@ class TarjetaEnMapa(QWidget):
             self._control.elegir(clave)
         self.refrescar(self._filas)
 
-    def _alternar(self) -> None:
-        self._minimizada = not self._minimizada
+    def _alternar_icono(self) -> None:
+        self._icono = not self._icono
         self.refrescar(self._filas)
 
     def _alternar_leyenda(self) -> None:
@@ -80,18 +84,17 @@ class TarjetaEnMapa(QWidget):
             acciones.addWidget(pildora_fecha(self._filtros))
         acciones.addWidget(accion(
             'simbologia.svg' if self._con_leyenda else 'simbologia-gris.svg',
-            'simbologia.svg', 'Ocultar leyendas' if self._con_leyenda else 'Mostrar leyendas',
+            'Ocultar leyendas' if self._con_leyenda else 'Mostrar leyendas',
             self._alternar_leyenda))
-        acciones.addWidget(accion('encuadrar.svg', 'encuadrar-hover.svg',
+        acciones.addWidget(accion('encuadrar.svg',
                                   'Encuadrar el mapa en esta capa o en sus municipios filtrados',
                                   lambda: self._control.encuadrar(fila[0])))
         if self._control.puede_descargar(fila[0]):
-            acciones.addWidget(accion('descargar.svg', 'descargar-hover.svg',
+            acciones.addWidget(accion('descargar.svg',
                                       'Descargar como GeoPackage, con su municipio y periodo',
                                       lambda: self._control.descargar(fila[0])))
         acciones.addStretch(1)
-        acciones.addWidget(accion('eliminar-hover.svg', 'eliminar-rojo-hover.svg',
-                                  'Quitar del mapa', lambda: self._control.quitar(fila)))
+        acciones.addWidget(bote('Quitar del mapa', lambda: self._control.quitar(fila)))
         return acciones
 
     def _caja(self, fila: Fila, asa: QWidget) -> QWidget:
@@ -119,11 +122,11 @@ class TarjetaEnMapa(QWidget):
     def refrescar(self, filas: list[Fila]) -> None:
         self._filas = filas
         vaciar(self._layout)
-        self._layout.addWidget(encabezado(len(filas), self._minimizada, self._alternar,
-                                          self._control.limpiar, self._switch))
+        self._layout.addWidget(encabezado(len(filas), self._control.limpiar, self._switch,
+                                          self._alternar_icono))
         cajas: list[QWidget] = []
         asas: list[QWidget] = []
-        for fila in [] if self._minimizada else filas:
+        for fila in filas:
             asa = crear_asa()
             asa.setVisible(len(filas) > 1)
             caja = self._caja(fila, asa)
@@ -131,11 +134,13 @@ class TarjetaEnMapa(QWidget):
             cajas.append(caja)
             asas.append(asa)
         self._arrastre.registrar(cajas, asas)
-        self.setVisible(bool(filas))
+        self.setVisible(bool(filas) and not self._icono)
+        self.boton.setVisible(bool(filas) and self._icono)
+        self.boton.setToolTip(f'Capas seleccionadas ({len(filas)}): clic para abrir')
         QTimer.singleShot(0, self._ajustar)
 
     def _ajustar(self) -> None:
         self.setFixedWidth(ANCHO_TARJETA)
         alto = self.sizeHint().height()
-        self.setFixedHeight(max(alto, self._control.alto_compacto()) if self._minimizada else alto)
+        self.setFixedHeight(alto)
         self._control.acomodar()
