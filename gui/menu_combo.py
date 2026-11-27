@@ -1,7 +1,7 @@
 from typing import Any
 
 from qgis.PyQt.QtCore import QModelIndex, QRectF, QSize, Qt
-from qgis.PyQt.QtGui import QColor, QPainter, QPainterPath
+from qgis.PyQt.QtGui import QColor, QFont, QPainter, QPainterPath
 from qgis.PyQt.QtWidgets import QComboBox, QStyle, QStyledItemDelegate, QStyleOptionViewItem
 
 from ..theme import color_de_rol, color_de_selector
@@ -15,6 +15,10 @@ RELLENO: int = 10
 RADIO: float = 4.0
 
 MARCADO: int = 2
+
+ROL_SECCION: int = int(Qt.ItemDataRole.UserRole) + 1
+
+ALTO_SECCION: int = 28
 
 HOVER: QColor = QColor(70, 80, 85, 20)
 
@@ -36,9 +40,24 @@ class DelegadoMenu(QStyledItemDelegate):
             return estado in (Qt.CheckState.Checked, MARCADO)
         return index.row() == self._combo.currentIndex()
 
+    def _pintar_seccion(self, painter: QPainter, option: QStyleOptionViewItem,
+                        index: QModelIndex) -> None:
+        fuente = QFont(option.font)
+        fuente.setBold(True)
+        fuente.setPointSizeF(max(1.0, fuente.pointSizeF() - 1))
+        painter.setFont(fuente)
+        painter.setPen(self._realce_tinta)
+        rect = option.rect.adjusted(MARGEN + RELLENO, 4, -RELLENO, 0)
+        painter.drawText(rect, int(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft),
+                         str(index.data(Qt.ItemDataRole.DisplayRole) or '').upper())
+
     def paint(self, painter: QPainter, option: QStyleOptionViewItem,
               index: QModelIndex) -> None:
         painter.save()
+        if index.data(ROL_SECCION):
+            self._pintar_seccion(painter, option, index)
+            painter.restore()
+            return
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = QRectF(option.rect.adjusted(MARGEN, 1, -MARGEN, -1))
         activo = self._activo(index)
@@ -61,6 +80,8 @@ class DelegadoMenu(QStyledItemDelegate):
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         size = super().sizeHint(option, index)
+        if index.data(ROL_SECCION):
+            return QSize(size.width(), ALTO_SECCION)
         return QSize(size.width() + RELLENO * 2, max(size.height(), ALTO))
 
 

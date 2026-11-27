@@ -10,7 +10,7 @@ AYUDA_ASA: str = 'Arrastra para cambiar el orden en el mapa.'
 
 GROSOR_GUIA: int = 2
 
-LADO_ASA: int = 20
+LADO_ASA: int = 22
 
 
 def crear_asa() -> QLabel:

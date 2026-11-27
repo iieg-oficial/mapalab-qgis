@@ -10,7 +10,6 @@ from .identidad import (
     guardar_icono,
     icono_urls,
     logo_urls,
-    refrescar_urls,
     tema_icono_urls,
     tema_override_url,
 )
@@ -79,7 +78,7 @@ class CargarArbolTask(_TareaMapaLab):
             self._client.municipios = []
 
     def _pendientes(self) -> list[list[str]]:
-        listas: list[list[str]] = [icono_urls(), refrescar_urls()]
+        listas: list[list[str]] = [icono_urls()]
         for marca in LOGOS:
             listas.extend([logo_urls(marca, False), logo_urls(marca, True)])
         for nodo in self._arbol:

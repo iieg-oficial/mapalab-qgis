@@ -29,9 +29,12 @@ from .consulta import ControlConsulta, HerramientaConsulta
 from .filtros import ControlFiltros
 from .operaciones import Operaciones
 from ..tasks import CargarArbolTask, Coordinador
-from .icons import boton_de_recarga, icono_de_recarga, olvidar_iconos
+from .icons import boton_de_recarga, olvidar_iconos
 from .en_mapa import EnMapa
+from .cargando import Cargando
 from .filas import acciones_titulo, boton_compartido, fila_servidor
+from .lista_mapa import accion
+from ..identidad import icono_plugin
 from .switch import SwitchModoBase
 from .titlebar import Footer, montar_titulo
 
@@ -63,6 +66,8 @@ class MapaLabDock(QDockWidget):
         self._switch = SwitchModoBase()
         self._switch.setEnabled(False)
         self._switch.cambiado.connect(self._on_cambio_modo)
+        self._modo_icono = False
+        self._boton_dock: Optional[QWidget] = None
         self._espera = QTimer(self)
         self._espera.setSingleShot(True)
         self._espera.setInterval(ESPERA_BUSQUEDA_MS)
@@ -86,8 +91,7 @@ class MapaLabDock(QDockWidget):
         self._search.textChanged.connect(lambda _: self._espera.start())
         set_role(self._search, 'search')
 
-        self._reload_button = boton_de_recarga(
-            self._client, lambda: self.load_tree(force=True))
+        self._reload_button = boton_de_recarga(lambda: self.load_tree(force=True))
         layout.addWidget(self._search)
 
         self._widget_tree = ArbolCatalogo(
@@ -97,6 +101,10 @@ class MapaLabDock(QDockWidget):
                                self._actions.remove_node, self._filtros, self._switch,
                                self._ops.descargar, lambda: self._client.cajas)
         layout.addWidget(self._widget_tree)
+        self._cargando = Cargando(self._widget_tree, icono_plugin(), 'Cargando catálogo…')
+        self._boton_dock = self._en_mapa.crear_boton(icono_plugin(), 'Abrir MapaLab',
+                                                     self._abrir_desde_icono)
+        self.visibilityChanged.connect(self._al_cambiar_visibilidad)
 
         self._footer = Footer(self._client, FOOTER_BAR_HEIGHT, FOOTER_LOGO_HEIGHT)
         layout.addWidget(self._footer)
@@ -108,13 +116,29 @@ class MapaLabDock(QDockWidget):
 
         apply_theme(container)
         self._titulo = montar_titulo(self, self._client, acciones_titulo(
-            self._reload_button, boton_compartido(self.abrir_compartido)))
+            self._reload_button, boton_compartido(self.abrir_compartido),
+            accion('minimizar.svg', 'Minimizar a un icono sobre el mapa',
+                   self._reducir_a_icono)))
         self._montar_identidad()
+
+    def _reducir_a_icono(self) -> None:
+        self._modo_icono = True
+        self.hide()
+
+    def _abrir_desde_icono(self) -> None:
+        self.show()
+        self.raise_()
+
+    def _al_cambiar_visibilidad(self, visible: bool) -> None:
+        if visible:
+            self._modo_icono = False
+        if self._boton_dock is not None:
+            self._boton_dock.setVisible(self._modo_icono and not visible)
+        self._en_mapa.acomodar()
 
     def _montar_identidad(self) -> None:
         self._titulo.refrescar()
         self._footer.refrescar()
-        self._reload_button.setIcon(icono_de_recarga(self._client))
 
     def _crear_consulta(self, canvas: Any) -> HerramientaConsulta:
         return HerramientaConsulta(canvas, self._client, self._tareas,
@@ -184,11 +208,12 @@ class MapaLabDock(QDockWidget):
     def load_tree(self, force: bool = False) -> None:
         if self._tareas.ocupado('arbol'):
             return
-        self._mensaje('Cargando catálogo…')
+        self._cargando.iniciar()
         tarea = CargarArbolTask(self._client, force)
         self._tareas.lanzar('arbol', tarea, self._arbol_listo, self._arbol_fallo)
 
     def _arbol_listo(self, arbol: list[dict[str, Any]], desde_cache: bool) -> None:
+        self._cargando.detener()
         self._tree = arbol
         olvidar_iconos()
         self._filtros.cargar_municipios()
@@ -200,6 +225,7 @@ class MapaLabDock(QDockWidget):
                       if desde_cache else '')
 
     def _arbol_fallo(self, detalle: str) -> None:
+        self._cargando.detener()
         self._switch.setEnabled(False)
         self._mensaje(f'No se pudo cargar el catálogo: {detalle}')
         self._url_row.setVisible(True)
