@@ -1,7 +1,8 @@
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from qgis.core import QgsProject
 from qgis.PyQt.QtCore import QSize, Qt
+from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -28,6 +29,8 @@ RELLENO_NOMBRE: int = 16
 LADO_CONTADOR: int = 18
 
 LADO_ACCION: int = 22
+
+LADO_BOTON_ACCION: int = 34
 
 AYUDA_FILA: str = 'Clic para ver sus acciones, su periodo y su leyenda, y ubicarla en el catálogo.'
 
@@ -64,18 +67,11 @@ class Nombre(QPushButton):
             self._completo, Qt.TextElideMode.ElideRight, ancho))
 
 
-def boton(texto: str, ayuda: str, rol: str, al_clic: Callable[[], Any]) -> QPushButton:
-    nuevo = QPushButton(texto)
-    nuevo.setToolTip(ayuda)
-    nuevo.clicked.connect(al_clic)
-    set_role(nuevo, rol)
-    return nuevo
-
-
-def accion(normal: str, hover: str, ayuda: str, al_clic: Callable[[], Any]) -> QToolButton:
+def boton_accion(icono: QIcon, ayuda: str, al_clic: Callable[[], Any]) -> QToolButton:
     nuevo = QToolButton()
-    nuevo.setIcon(icono_asset(normal, hover))
+    nuevo.setIcon(icono)
     nuevo.setIconSize(QSize(LADO_ACCION, LADO_ACCION))
+    nuevo.setFixedSize(LADO_BOTON_ACCION, LADO_BOTON_ACCION)
     nuevo.setAutoRaise(True)
     nuevo.setToolTip(ayuda)
     nuevo.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -84,40 +80,53 @@ def accion(normal: str, hover: str, ayuda: str, al_clic: Callable[[], Any]) -> Q
     return nuevo
 
 
+def accion(archivo: str, ayuda: str, al_clic: Callable[[], Any],
+           hover: Optional[str] = None) -> QToolButton:
+    return boton_accion(icono_asset(archivo, hover), ayuda, al_clic)
+
+
+def contador_en(boton: QToolButton, total: int) -> QLabel:
+    contador = QLabel(str(total), boton)
+    contador.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    contador.setFixedSize(LADO_CONTADOR, LADO_CONTADOR)
+    contador.move(boton.width() - LADO_CONTADOR, 0)
+    contador.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+    set_role(contador, 'mapa-contador')
+    return contador
+
+
+def bote(ayuda: str, al_clic: Callable[[], Any]) -> QToolButton:
+    return accion('eliminar-hover.svg', ayuda, al_clic, 'eliminar-rojo-hover.svg')
+
+
 def _limpiar(total: int, al_limpiar: Callable[[], Any]) -> QToolButton:
-    limpiar = accion('eliminar-hover.svg', 'eliminar-rojo-hover.svg',
-                     'Quitar todas las capas del mapa', lambda: None)
+    limpiar = bote('Quitar todas las capas del mapa', lambda: None)
     texto = f'Quitar {"la capa" if total == 1 else f"las {total} capas"} del mapa'
     menu = QMenu(limpiar)
     menu.addAction(texto, al_limpiar)
     limpiar.setMenu(menu)
     limpiar.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-    limpiar.setFixedSize(LADO_ACCION + 14, LADO_ACCION + 10)
-    contador = QLabel(str(total), limpiar)
-    contador.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    contador.setFixedSize(LADO_CONTADOR, LADO_CONTADOR)
-    contador.move(limpiar.width() - LADO_CONTADOR, 0)
-    contador.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-    set_role(contador, 'mapa-contador')
+    contador_en(limpiar, total)
     return limpiar
 
 
-def encabezado(total: int, minimizada: bool, al_alternar: Callable[[], Any],
-               al_limpiar: Callable[[], Any], switch: QWidget) -> QWidget:
+AYUDA_MINIMIZAR: str = 'Minimizar a un icono'
+
+
+def encabezado(total: int, al_limpiar: Callable[[], Any], switch: QWidget,
+               al_minimizar: Callable[[], Any]) -> QWidget:
     caja = QWidget()
     layout = QHBoxLayout(caja)
-    layout.setContentsMargins(0, 0, 0, 0 if minimizada else 8)
+    layout.setContentsMargins(0, 0, 0, 8)
     layout.setSpacing(4)
     titulo = QLabel('Capa seleccionada' if total == 1 else 'Capas seleccionadas')
-    set_role(titulo, 'mapa-titulo')
+    set_role(titulo, 'mapa-titulo-capas')
     centro = Qt.AlignmentFlag.AlignVCenter
     layout.addWidget(titulo, 0, centro)
     layout.addStretch(1)
     layout.addWidget(switch, 0, centro)
     layout.addWidget(_limpiar(total, al_limpiar), 0, centro)
-    layout.addWidget(boton('+' if minimizada else '−',
-                           'Expandir' if minimizada else 'Minimizar',
-                           'mapa-minimizar', al_alternar), 0, centro)
+    layout.addWidget(accion('minimizar.svg', AYUDA_MINIMIZAR, al_minimizar), 0, centro)
     return caja
 
 

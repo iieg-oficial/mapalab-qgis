@@ -1,12 +1,10 @@
-import os
 from typing import Any, Optional
 
 from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
 from .gui.dock import MapaLabDock
-from .identidad import icono_guardado
+from .identidad import icono_plugin
 
 MENU_TITLE: str = 'MapaLab'
 
@@ -24,15 +22,8 @@ class MapaLabPlugin:
         self._compartido: Optional[QAction] = None
         self._dock: Optional[MapaLabDock] = None
 
-    def _icon(self) -> QIcon:
-        oficial = icono_guardado()
-        if oficial:
-            return QIcon(oficial)
-        path = os.path.join(os.path.dirname(__file__), 'icon.svg')
-        return QIcon(path) if os.path.exists(path) else QIcon()
-
     def initGui(self) -> None:
-        self._action = QAction(self._icon(), MENU_TITLE, self._iface.mainWindow())
+        self._action = QAction(icono_plugin(), MENU_TITLE, self._iface.mainWindow())
         self._action.setCheckable(True)
         self._action.triggered.connect(self._toggle)
 
@@ -52,7 +43,7 @@ class MapaLabPlugin:
             self._dock.visibilityChanged.connect(self._on_visibility)
             self._iface.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._dock)
             if self._action is not None:
-                self._action.setIcon(self._icon())
+                self._action.setIcon(icono_plugin())
         return self._dock
 
     def _toggle(self, checked: bool) -> None:

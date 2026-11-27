@@ -39,8 +39,8 @@ class Apilado(QObject):
         self._tarjetas: list[QWidget] = []
         canvas.installEventFilter(self)
 
-    def agregar(self, tarjeta: QWidget) -> None:
-        self._tarjetas.append(tarjeta)
+    def agregar(self, tarjeta: QWidget, primero: bool = False) -> None:
+        self._tarjetas.insert(0 if primero else len(self._tarjetas), tarjeta)
         self.acomodar()
 
     def eventFilter(self, objeto: QObject, evento: Any) -> bool:
